@@ -4,6 +4,7 @@ import { LayoutDashboard, Route as RouteIcon, Fuel, FileText, Settings, Navigati
 import { cn } from "@/lib/utils";
 import { TrackingBar } from "./TrackingBar";
 import { ThemeToggle } from "./ThemeToggle";
+import { WorldClock } from "./WorldClock";
 
 const TABS = [
   { to: "/", label: "Dashboard", Icon: LayoutDashboard, exact: true },
