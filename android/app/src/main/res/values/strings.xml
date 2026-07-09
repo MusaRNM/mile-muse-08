@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MileTrack</string>
+    <string name="title_activity_main">MileTrack</string>
+    <string name="package_name">app.lovable.miletrack</string>
+    <string name="custom_url_scheme">app.lovable.miletrack</string>
+</resources>
