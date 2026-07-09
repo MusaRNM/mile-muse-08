@@ -8,6 +8,7 @@ interface StatCardProps {
   icon?: ReactNode;
   accent?: "primary" | "business" | "personal" | "muted";
   className?: string;
+  onClick?: () => void;
 }
 
 const ACCENT: Record<NonNullable<StatCardProps["accent"]>, string> = {
@@ -17,9 +18,17 @@ const ACCENT: Record<NonNullable<StatCardProps["accent"]>, string> = {
   muted: "text-foreground",
 };
 
-export function StatCard({ label, value, sub, icon, accent = "muted", className }: StatCardProps) {
+export function StatCard({ label, value, sub, icon, accent = "muted", className, onClick }: StatCardProps) {
+  const Comp = onClick ? "button" : "div";
   return (
-    <div className={cn("rounded-2xl border bg-card p-4 shadow-sm", className)}>
+    <Comp
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-2xl border bg-card p-4 text-left shadow-sm",
+        onClick && "transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
@@ -30,6 +39,6 @@ export function StatCard({ label, value, sub, icon, accent = "muted", className 
         {value}
       </div>
       {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
-    </div>
+    </Comp>
   );
 }
