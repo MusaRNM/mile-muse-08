@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { StatCard } from "@/components/StatCard";
 import { FuelLineChart } from "@/components/MileageChart";
 import { AddFuelDialog } from "@/components/AddFuelDialog";
