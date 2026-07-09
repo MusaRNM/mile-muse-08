@@ -26,6 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
         <ThemeToggle />
       </header>
+      <WorldClock />
 
       <main className="flex-1 px-4 pb-40 pt-4">{children}</main>
 
