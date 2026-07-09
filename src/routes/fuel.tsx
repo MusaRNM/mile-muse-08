@@ -169,3 +169,26 @@ function FuelPage() {
     </div>
   );
 }
+
+/** Thumbnail that opens a full-size, readable view of the fuel receipt. */
+function ReceiptThumb({ src }: { src: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="size-14 shrink-0 overflow-hidden rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label="View receipt"
+      >
+        <img src={src} alt="Receipt" className="size-full object-cover" loading="lazy" />
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[95vh] max-w-3xl overflow-auto p-2">
+          <DialogTitle className="sr-only">Fuel receipt</DialogTitle>
+          <img src={src} alt="Fuel receipt" className="h-auto w-full rounded-md" />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
