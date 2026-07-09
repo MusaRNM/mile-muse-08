@@ -90,8 +90,11 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
 export async function stopBackgroundTracking(): Promise<void> {
   if (!isNativeApp() || !bgWatcherId) return;
   try {
-    const { BackgroundGeolocation } = await import("@capacitor-community/background-geolocation");
-    await BackgroundGeolocation.removeWatcher({ id: bgWatcherId });
+    const mod = await import("@capacitor-community/background-geolocation");
+    const BG = ((mod as unknown as { BackgroundGeolocation?: unknown }).BackgroundGeolocation ?? mod.default) as {
+      removeWatcher: (opts: { id: string }) => Promise<void>;
+    };
+    await BG.removeWatcher({ id: bgWatcherId });
   } catch {
     /* ignore */
   }
