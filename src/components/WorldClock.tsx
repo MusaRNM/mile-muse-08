@@ -57,18 +57,22 @@ export function WorldClock() {
     };
   }, []);
 
-  const time = new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  }).format(now);
+  const time = now
+    ? new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(now)
+    : "";
 
-  const date = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(now);
+  const date = now
+    ? new Intl.DateTimeFormat(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(now)
+    : "";
 
   const tzShort = tz ? tz.split("/").pop()?.replace(/_/g, " ") : "";
 
