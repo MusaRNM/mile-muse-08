@@ -214,6 +214,19 @@ export const useTracker = create<TrackerState>((set, get) => {
 
       // Persist immediately so nothing is lost, then enrich with addresses.
       await saveTrip(trip);
+      // Best-effort completion notification.
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          const miles = (distanceMeters / 1609.344).toFixed(1);
+          new Notification("Trip saved", {
+            body: `${miles} mi · ${Math.round(durationSec / 60)} min`,
+            icon: "/icons/icon-192.png",
+            tag: "miletrack-trip",
+          });
+        }
+      } catch {
+        /* ignore */
+      }
       const promptOnEnd = useSettings.getState().promptOnEnd;
       reset();
       set({ pendingClassifyId: promptOnEnd ? id : null });
