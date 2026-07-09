@@ -15,8 +15,8 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const CLIENT_DIR = path.join(ROOT, ".output", "public");
-const SERVER_DIR = path.join(ROOT, ".output", "server");
+const CLIENT_DIR = path.join(ROOT, "dist", "client");
+const SERVER_DIR = path.join(ROOT, "dist", "server");
 const PORT = 8791;
 
 const IS_WINDOWS = process.platform === "win32";
