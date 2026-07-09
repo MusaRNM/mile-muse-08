@@ -7,18 +7,24 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: "https",
   },
+  android: {
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: true,
+    backgroundColor: "#0b0b0f",
+  },
   plugins: {
     LocalNotifications: {
       smallIcon: "ic_stat_icon",
       iconColor: "#d67a21",
     },
     BackgroundGeolocation: {
-      // Ask on first use; permission persists after user accepts.
       requestPermissionsOnStart: true,
     },
-  },
-  ios: {
-    contentInset: "always",
+    Geolocation: {
+      // Android auto-requests location permissions on first watchPosition call.
+      permissions: ["location", "coarseLocation"],
+    },
   },
 };
 
