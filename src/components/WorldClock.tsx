@@ -8,7 +8,7 @@ import { Clock, Globe } from "lucide-react";
  * augmented with a coarse city hint from a lightweight reverse geocode.
  */
 export function WorldClock() {
-  const [now, setNow] = useState<Date>(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [tz, setTz] = useState<string>("");
   const [city, setCity] = useState<string>("");
 
@@ -18,6 +18,7 @@ export function WorldClock() {
     } catch {
       /* ignore */
     }
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -56,18 +57,22 @@ export function WorldClock() {
     };
   }, []);
 
-  const time = new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  }).format(now);
+  const time = now
+    ? new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(now)
+    : "";
 
-  const date = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(now);
+  const date = now
+    ? new Intl.DateTimeFormat(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(now)
+    : "";
 
   const tzShort = tz ? tz.split("/").pop()?.replace(/_/g, " ") : "";
 

@@ -3,6 +3,14 @@ import { newId, saveTrip } from "./db";
 import { haversine, mphToMps, pathDistance, reverseGeocode, simplifyPath } from "./geo";
 import { useSettings } from "./settings";
 import type { TrackPoint, Trip } from "./types";
+import {
+  ensureNotificationPermission,
+  isNativeApp,
+  notify,
+  requestNativeLocation,
+  startBackgroundTracking,
+  stopBackgroundTracking,
+} from "./native";
 
 export type PermissionStatus = "unknown" | "prompt" | "granted" | "denied";
 
@@ -126,10 +134,34 @@ export const useTracker = create<TrackerState>((set, get) => {
     }
   }
 
+  function handleNativePoint(p: { latitude: number; longitude: number; speed: number | null; time: number }) {
+    onPosition({
+      coords: {
+        latitude: p.latitude,
+        longitude: p.longitude,
+        accuracy: 0,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: p.speed,
+      },
+      timestamp: p.time,
+    } as GeolocationPosition);
+  }
+
   function startWatch() {
+    // Prefer background-capable native tracking on iOS/Android; falls back
+    // to browser watchPosition otherwise.
+    if (isNativeApp()) {
+      void startBackgroundTracking(handleNativePoint).then((ok) => {
+        if (ok) set({ watching: true, error: null, permission: "granted" });
+      });
+      // Also start a foreground watch so the UI updates immediately even
+      // before the background service delivers its first point.
+    }
     const g = geo();
     if (!g) {
-      set({ error: "Geolocation is not supported on this device." });
+      if (!isNativeApp()) set({ error: "Geolocation is not supported on this device." });
       return;
     }
     if (watchId !== null) return;
@@ -145,6 +177,7 @@ export const useTracker = create<TrackerState>((set, get) => {
     const g = geo();
     if (g && watchId !== null) g.clearWatch(watchId);
     watchId = null;
+    if (isNativeApp()) void stopBackgroundTracking();
     set({ watching: false });
   }
 
@@ -214,16 +247,10 @@ export const useTracker = create<TrackerState>((set, get) => {
 
       // Persist immediately so nothing is lost, then enrich with addresses.
       await saveTrip(trip);
-      // Best-effort completion notification.
+      // Best-effort completion notification (native or web).
       try {
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-          const miles = (distanceMeters / 1609.344).toFixed(1);
-          new Notification("Trip saved", {
-            body: `${miles} mi · ${Math.round(durationSec / 60)} min`,
-            icon: "/icons/icon-192.png",
-            tag: "miletrack-trip",
-          });
-        }
+        const miles = (distanceMeters / 1609.344).toFixed(1);
+        void notify("Trip saved", `${miles} mi · ${Math.round(durationSec / 60)} min`);
       } catch {
         /* ignore */
       }
@@ -248,6 +275,21 @@ export const useTracker = create<TrackerState>((set, get) => {
     clearPending: () => set({ pendingClassifyId: null }),
 
     requestPermission: async () => {
+      // Native: use Capacitor Geolocation permissions API so the OS prompt
+      // is shown, and remember the answer for good.
+      if (isNativeApp()) {
+        const ok = await requestNativeLocation();
+        set({ permission: ok ? "granted" : "denied", error: ok ? null : "Location permission denied." });
+        if (ok) {
+          try {
+            useSettings.getState().update({ autoDetect: true });
+          } catch {
+            /* ignore */
+          }
+          void ensureNotificationPermission();
+        }
+        return ok ? "granted" : "denied";
+      }
       const g = geo();
       if (!g) {
         set({ permission: "denied", error: "Geolocation is not supported." });
@@ -257,21 +299,12 @@ export const useTracker = create<TrackerState>((set, get) => {
         g.getCurrentPosition(
           () => {
             set({ permission: "granted", error: null });
-            // Persistently enable auto-tracking on first successful grant so
-            // location keeps recording next time without re-asking.
             try {
               useSettings.getState().update({ autoDetect: true });
             } catch {
               /* ignore */
             }
-            // Also request notification permission for trip end/start alerts.
-            if (typeof Notification !== "undefined" && Notification.permission === "default") {
-              try {
-                void Notification.requestPermission();
-              } catch {
-                /* ignore */
-              }
-            }
+            void ensureNotificationPermission();
             resolve("granted");
           },
           (err) => {
