@@ -275,6 +275,21 @@ export const useTracker = create<TrackerState>((set, get) => {
     clearPending: () => set({ pendingClassifyId: null }),
 
     requestPermission: async () => {
+      // Native: use Capacitor Geolocation permissions API so the OS prompt
+      // is shown, and remember the answer for good.
+      if (isNativeApp()) {
+        const ok = await requestNativeLocation();
+        set({ permission: ok ? "granted" : "denied", error: ok ? null : "Location permission denied." });
+        if (ok) {
+          try {
+            useSettings.getState().update({ autoDetect: true });
+          } catch {
+            /* ignore */
+          }
+          void ensureNotificationPermission();
+        }
+        return ok ? "granted" : "denied";
+      }
       const g = geo();
       if (!g) {
         set({ permission: "denied", error: "Geolocation is not supported." });
@@ -284,21 +299,12 @@ export const useTracker = create<TrackerState>((set, get) => {
         g.getCurrentPosition(
           () => {
             set({ permission: "granted", error: null });
-            // Persistently enable auto-tracking on first successful grant so
-            // location keeps recording next time without re-asking.
             try {
               useSettings.getState().update({ autoDetect: true });
             } catch {
               /* ignore */
             }
-            // Also request notification permission for trip end/start alerts.
-            if (typeof Notification !== "undefined" && Notification.permission === "default") {
-              try {
-                void Notification.requestPermission();
-              } catch {
-                /* ignore */
-              }
-            }
+            void ensureNotificationPermission();
             resolve("granted");
           },
           (err) => {
