@@ -11,7 +11,11 @@
     "build:capacitor": "node scripts/build-capacitor.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "android:add": "cap add android",
+    "android:sync": "node scripts/build-capacitor.mjs && cap sync android",
+    "android:open": "cap open android",
+    "android:run": "node scripts/build-capacitor.mjs && cap sync android && cap run android"
   },
   "dependencies": {
     "@capacitor-community/background-geolocation": "^1.2.26",
