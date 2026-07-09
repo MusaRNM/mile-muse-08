@@ -134,10 +134,34 @@ export const useTracker = create<TrackerState>((set, get) => {
     }
   }
 
+  function handleNativePoint(p: { latitude: number; longitude: number; speed: number | null; time: number }) {
+    onPosition({
+      coords: {
+        latitude: p.latitude,
+        longitude: p.longitude,
+        accuracy: 0,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: p.speed,
+      },
+      timestamp: p.time,
+    } as GeolocationPosition);
+  }
+
   function startWatch() {
+    // Prefer background-capable native tracking on iOS/Android; falls back
+    // to browser watchPosition otherwise.
+    if (isNativeApp()) {
+      void startBackgroundTracking(handleNativePoint).then((ok) => {
+        if (ok) set({ watching: true, error: null, permission: "granted" });
+      });
+      // Also start a foreground watch so the UI updates immediately even
+      // before the background service delivers its first point.
+    }
     const g = geo();
     if (!g) {
-      set({ error: "Geolocation is not supported on this device." });
+      if (!isNativeApp()) set({ error: "Geolocation is not supported on this device." });
       return;
     }
     if (watchId !== null) return;
@@ -153,6 +177,7 @@ export const useTracker = create<TrackerState>((set, get) => {
     const g = geo();
     if (g && watchId !== null) g.clearWatch(watchId);
     watchId = null;
+    if (isNativeApp()) void stopBackgroundTracking();
     set({ watching: false });
   }
 
