@@ -199,15 +199,19 @@ function Dashboard() {
         />
       </div>
 
-      {odoBaselineAt > 0 && (
-        <StatCard
-          label="Odometer"
-          accent="primary"
-          icon={<Gauge className="size-4" />}
-          value={metersToUnit(odometerMeters, unit).toFixed(1)}
-          sub={unitLabel(unit)}
-        />
-      )}
+      <StatCard
+        label="Odometer"
+        accent="primary"
+        icon={<Gauge className="size-4" />}
+        value={metersToUnit(odometerMeters, unit).toFixed(1)}
+        sub={
+          odoBaselineAt > 0
+            ? unitLabel(unit)
+            : `${unitLabel(unit)} · tap to set baseline`
+        }
+        onClick={() => setOdoCheckOpen(true)}
+      />
+
 
       {/* Chart */}
       <div className="rounded-2xl border bg-card p-4 shadow-sm">
