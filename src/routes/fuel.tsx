@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { StatCard } from "@/components/StatCard";
 import { FuelLineChart } from "@/components/MileageChart";
 import { AddFuelDialog } from "@/components/AddFuelDialog";
@@ -124,12 +125,7 @@ function FuelPage() {
           f.map((entry) => (
             <div key={entry.id} className="flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm">
               {entry.receiptImage ? (
-                <img
-                  src={entry.receiptImage}
-                  alt="Receipt"
-                  className="size-14 shrink-0 rounded-lg object-cover"
-                  loading="lazy"
-                />
+                <ReceiptThumb src={entry.receiptImage} />
               ) : (
                 <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-muted">
                   <FuelIcon className="size-6 text-muted-foreground" />
@@ -171,5 +167,28 @@ function FuelPage() {
 
       <AddFuelDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>
+  );
+}
+
+/** Thumbnail that opens a full-size, readable view of the fuel receipt. */
+function ReceiptThumb({ src }: { src: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="size-14 shrink-0 overflow-hidden rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label="View receipt"
+      >
+        <img src={src} alt="Receipt" className="size-full object-cover" loading="lazy" />
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[95vh] max-w-3xl overflow-auto p-2">
+          <DialogTitle className="sr-only">Fuel receipt</DialogTitle>
+          <img src={src} alt="Fuel receipt" className="h-auto w-full rounded-md" />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

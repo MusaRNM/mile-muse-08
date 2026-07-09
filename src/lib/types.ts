@@ -96,7 +96,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   promptOnEnd: true,
   irsRatePerMile: 0.7, // 2025 IRS standard business mileage rate
   theme: "system",
-  reverseGeocodeEnabled: false,
+  reverseGeocodeEnabled: true,
   cloudSyncEnabled: false,
   odometerBaselineMeters: 0,
   odometerBaselineAt: 0,

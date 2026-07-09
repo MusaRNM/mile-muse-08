@@ -17,7 +17,15 @@ const TABS = [
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col bg-background">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur">
+      {/* Safe-area spacer so the header doesn't sit under the Android status bar / notch. */}
+      <div
+        className="sticky top-0 z-40 bg-background"
+        style={{ height: "env(safe-area-inset-top)" }}
+        aria-hidden
+      />
+      <header className="sticky z-30 flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur"
+        style={{ top: "env(safe-area-inset-top)" }}
+      >
         <Link to="/" className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Navigation className="size-4" />

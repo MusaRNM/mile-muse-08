@@ -74,9 +74,19 @@ export function parseReceipt(text: string): ParsedReceipt {
     return out;
   };
 
-  // Gallons: number preceding "gal" or "gallons".
-  const gal = numbers(/(\d{1,3}\.\d{1,3})\s*(?:gal|gallons|g\b)/);
-  if (gal.length) result.gallons = gal[0];
+  // Gallons: match many layouts — "10.532 gal", "GAL 10.532", "GALLONS: 10.5",
+  // "QTY 10.532", integer gallons, and pump-labelled variants.
+  const galPatterns = [
+    /(\d{1,3}(?:\.\d{1,3})?)\s*(?:gal|gallons|gals|g\b)/,
+    /(?:gal|gallons|gals|qty|quantity|volume|units?)[^\d\n]{0,10}(\d{1,3}(?:\.\d{1,3})?)/,
+  ];
+  for (const p of galPatterns) {
+    const found = numbers(p).find((n) => n > 0 && n < 300);
+    if (found !== undefined) {
+      result.gallons = found;
+      break;
+    }
+  }
 
   // Price per gallon: values like "$3.499" or number near "/gal" or "price/gal".
   const ppg =
