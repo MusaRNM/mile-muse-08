@@ -43,15 +43,20 @@ let bgWatcherId: string | null = null;
 export async function startBackgroundTracking(onPos: BgLocationHandler): Promise<boolean> {
   if (!isNativeApp()) return false;
   try {
-    const { BackgroundGeolocation } = await import("@capacitor-community/background-geolocation");
+    const mod = await import("@capacitor-community/background-geolocation");
+    const BackgroundGeolocation = (mod as unknown as { BackgroundGeolocation?: unknown }).BackgroundGeolocation ?? mod.default;
+    const BG = BackgroundGeolocation as {
+      addWatcher: (opts: Record<string, unknown>, cb: (location: { latitude: number; longitude: number; speed?: number | null; time?: number } | null, error?: unknown) => void) => Promise<string>;
+      removeWatcher: (opts: { id: string }) => Promise<void>;
+    };
     if (bgWatcherId) {
       try {
-        await BackgroundGeolocation.removeWatcher({ id: bgWatcherId });
+        await BG.removeWatcher({ id: bgWatcherId });
       } catch {
         /* ignore */
       }
     }
-    bgWatcherId = await BackgroundGeolocation.addWatcher(
+    bgWatcherId = await BG.addWatcher(
       {
         backgroundMessage: "MileTrack is recording your drive.",
         backgroundTitle: "Tracking mileage",
