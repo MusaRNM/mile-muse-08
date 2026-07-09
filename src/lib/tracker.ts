@@ -117,7 +117,9 @@ export const useTracker = create<TrackerState>((set, get) => {
     });
 
     // Auto-end after being stopped for the configured number of minutes.
-    if (!s.manual && s.lastMoveTime) {
+    // Applies to BOTH manual and auto-detected trips so a forgotten "Stop"
+    // won't leave a trip recording forever while you're parked.
+    if (s.lastMoveTime) {
       const stoppedMs = now - s.lastMoveTime;
       if (stoppedMs > settings.stopMinutes * 60 * 1000) {
         void get().stopAndSave();
