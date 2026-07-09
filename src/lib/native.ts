@@ -14,6 +14,43 @@
 
 let cachedIsNative: boolean | null = null;
 
+type NativeBgLocation = {
+  latitude: number;
+  longitude: number;
+  speed?: number | null;
+  time?: number | null;
+};
+
+type NativeBgLocationError = Error & { code?: string };
+
+type NativeBgLocationPlugin = {
+  addWatcher: (
+    opts: {
+      backgroundMessage?: string;
+      backgroundTitle?: string;
+      requestPermissions?: boolean;
+      stale?: boolean;
+      distanceFilter?: number;
+    },
+    cb: (location?: NativeBgLocation, error?: NativeBgLocationError) => void,
+  ) => Promise<string>;
+  removeWatcher: (opts: { id: string }) => Promise<void>;
+};
+
+let backgroundGeolocation: NativeBgLocationPlugin | null = null;
+
+async function getBackgroundGeolocation(): Promise<NativeBgLocationPlugin> {
+  if (backgroundGeolocation) return backgroundGeolocation;
+
+  // The community background-geolocation package ships native iOS/Android code
+  // and TypeScript definitions, but no browser JavaScript entry file. Importing
+  // it directly makes Vite fail module resolution during web/SSR builds. The
+  // Capacitor runtime exposes it by plugin name instead.
+  const { registerPlugin } = await import("@capacitor/core");
+  backgroundGeolocation = registerPlugin<NativeBgLocationPlugin>("BackgroundGeolocation");
+  return backgroundGeolocation;
+}
+
 export function isNativeApp(): boolean {
   if (cachedIsNative !== null) return cachedIsNative;
   try {
@@ -43,12 +80,7 @@ let bgWatcherId: string | null = null;
 export async function startBackgroundTracking(onPos: BgLocationHandler): Promise<boolean> {
   if (!isNativeApp()) return false;
   try {
-    const mod = await import("@capacitor-community/background-geolocation");
-    const BackgroundGeolocation = (mod as unknown as { BackgroundGeolocation?: unknown }).BackgroundGeolocation ?? mod.default;
-    const BG = BackgroundGeolocation as {
-      addWatcher: (opts: Record<string, unknown>, cb: (location: { latitude: number; longitude: number; speed?: number | null; time?: number } | null, error?: unknown) => void) => Promise<string>;
-      removeWatcher: (opts: { id: string }) => Promise<void>;
-    };
+    const BG = await getBackgroundGeolocation();
     if (bgWatcherId) {
       try {
         await BG.removeWatcher({ id: bgWatcherId });
@@ -90,10 +122,7 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
 export async function stopBackgroundTracking(): Promise<void> {
   if (!isNativeApp() || !bgWatcherId) return;
   try {
-    const mod = await import("@capacitor-community/background-geolocation");
-    const BG = ((mod as unknown as { BackgroundGeolocation?: unknown }).BackgroundGeolocation ?? mod.default) as {
-      removeWatcher: (opts: { id: string }) => Promise<void>;
-    };
+    const BG = await getBackgroundGeolocation();
     await BG.removeWatcher({ id: bgWatcherId });
   } catch {
     /* ignore */
