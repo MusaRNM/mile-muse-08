@@ -8,7 +8,7 @@ import { Clock, Globe } from "lucide-react";
  * augmented with a coarse city hint from a lightweight reverse geocode.
  */
 export function WorldClock() {
-  const [now, setNow] = useState<Date>(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [tz, setTz] = useState<string>("");
   const [city, setCity] = useState<string>("");
 
@@ -18,6 +18,7 @@ export function WorldClock() {
     } catch {
       /* ignore */
     }
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
