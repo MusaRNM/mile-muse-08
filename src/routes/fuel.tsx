@@ -125,12 +125,7 @@ function FuelPage() {
           f.map((entry) => (
             <div key={entry.id} className="flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm">
               {entry.receiptImage ? (
-                <img
-                  src={entry.receiptImage}
-                  alt="Receipt"
-                  className="size-14 shrink-0 rounded-lg object-cover"
-                  loading="lazy"
-                />
+                <ReceiptThumb src={entry.receiptImage} />
               ) : (
                 <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-muted">
                   <FuelIcon className="size-6 text-muted-foreground" />
