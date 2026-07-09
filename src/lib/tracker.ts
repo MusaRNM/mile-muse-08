@@ -244,6 +244,21 @@ export const useTracker = create<TrackerState>((set, get) => {
         g.getCurrentPosition(
           () => {
             set({ permission: "granted", error: null });
+            // Persistently enable auto-tracking on first successful grant so
+            // location keeps recording next time without re-asking.
+            try {
+              useSettings.getState().update({ autoDetect: true });
+            } catch {
+              /* ignore */
+            }
+            // Also request notification permission for trip end/start alerts.
+            if (typeof Notification !== "undefined" && Notification.permission === "default") {
+              try {
+                void Notification.requestPermission();
+              } catch {
+                /* ignore */
+              }
+            }
             resolve("granted");
           },
           (err) => {
