@@ -3,6 +3,14 @@ import { newId, saveTrip } from "./db";
 import { haversine, mphToMps, pathDistance, reverseGeocode, simplifyPath } from "./geo";
 import { useSettings } from "./settings";
 import type { TrackPoint, Trip } from "./types";
+import {
+  ensureNotificationPermission,
+  isNativeApp,
+  notify,
+  requestNativeLocation,
+  startBackgroundTracking,
+  stopBackgroundTracking,
+} from "./native";
 
 export type PermissionStatus = "unknown" | "prompt" | "granted" | "denied";
 
