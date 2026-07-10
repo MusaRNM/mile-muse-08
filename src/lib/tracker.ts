@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { newId, saveTrip } from "./db";
-import { haversine, mphToMps, pathDistance, reverseGeocode, simplifyPath } from "./geo";
+import { formatSpeed, haversine, mphToMps, pathDistance, reverseGeocode, simplifyPath } from "./geo";
 import { useSettings } from "./settings";
 import type { TrackPoint, Trip } from "./types";
 import {
@@ -45,6 +45,8 @@ interface TrackerState {
 }
 
 let watchId: number | null = null;
+let lastWatchPoint: TrackPoint | null = null;
+let autoStopTimer: ReturnType<typeof setInterval> | null = null;
 
 function geo(): Geolocation | null {
   if (typeof navigator === "undefined" || !("geolocation" in navigator)) return null;
@@ -52,7 +54,25 @@ function geo(): Geolocation | null {
 }
 
 export const useTracker = create<TrackerState>((set, get) => {
+  function clearAutoStopTimer() {
+    if (autoStopTimer) clearInterval(autoStopTimer);
+    autoStopTimer = null;
+  }
+
+  function armAutoStopTimer() {
+    if (autoStopTimer) return;
+    autoStopTimer = setInterval(() => {
+      const state = get();
+      if (!state.recording || !state.lastMoveTime) return;
+      const stoppedMs = Date.now() - state.lastMoveTime;
+      if (stoppedMs > useSettings.getState().stopMinutes * 60 * 1000) {
+        void state.stopAndSave();
+      }
+    }, 30_000);
+  }
+
   function reset() {
+    clearAutoStopTimer();
     set({
       recording: false,
       manual: false,
@@ -70,6 +90,8 @@ export const useTracker = create<TrackerState>((set, get) => {
     const settings = useSettings.getState();
     const startMps = mphToMps(settings.startThresholdMph);
     const now = pos.timestamp || Date.now();
+    const accuracy = pos.coords.accuracy;
+    if (Number.isFinite(accuracy) && accuracy > 500) return;
     const point: TrackPoint = {
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
@@ -77,29 +99,39 @@ export const useTracker = create<TrackerState>((set, get) => {
       speed: pos.coords.speed,
     };
 
-    // Derive a speed even when the device doesn't report one.
-    let speed = pos.coords.speed ?? 0;
-    if ((speed === null || speed <= 0) && s.path.length > 0) {
-      const prev = s.path[s.path.length - 1];
+    // Android GPS often reports `speed: null`; derive it from consecutive
+    // samples so auto-start and live mph still work.
+    const previousWatchPoint = lastWatchPoint;
+    let speed = typeof pos.coords.speed === "number" && Number.isFinite(pos.coords.speed) ? pos.coords.speed : 0;
+    if (speed <= 0 && previousWatchPoint) {
+      const prev = previousWatchPoint;
       const dt = (now - prev.t) / 1000;
-      if (dt > 0) speed = haversine(prev, point) / dt;
+      const distance = haversine(prev, point);
+      if (dt >= 1 && dt <= 180 && distance >= 3) speed = distance / dt;
     }
     speed = Math.max(0, speed || 0);
+    lastWatchPoint = point;
 
     set({ permission: "granted", currentSpeed: speed });
 
     // Auto-start a trip when moving fast enough.
     if (!s.recording) {
       if (settings.autoDetect && speed >= startMps) {
+        const startingPath =
+          previousWatchPoint && now - previousWatchPoint.t <= 120_000
+            ? [previousWatchPoint, point]
+            : [point];
         set({
           recording: true,
           manual: false,
           startTime: now,
-          path: [point],
-          distanceMeters: 0,
+          path: startingPath,
+          distanceMeters: pathDistance(startingPath),
           maxSpeed: speed,
           lastMoveTime: now,
         });
+        armAutoStopTimer();
+        void notify("Auto trip recording started", `MileTrack is tracking at ${formatSpeed(speed, settings.distanceUnit)}.`);
       }
       return;
     }
@@ -109,18 +141,19 @@ export const useTracker = create<TrackerState>((set, get) => {
     const distanceMeters = s.distanceMeters + (s.path.length ? haversine(s.path[s.path.length - 1], point) : 0);
     const maxSpeed = Math.max(s.maxSpeed, speed);
     const moving = speed >= mphToMps(3);
+    const lastMoveTime = moving ? now : s.lastMoveTime;
     set({
       path,
       distanceMeters,
       maxSpeed,
-      lastMoveTime: moving ? now : s.lastMoveTime,
+      lastMoveTime,
     });
 
     // Auto-end after being stopped for the configured number of minutes.
     // Applies to BOTH manual and auto-detected trips so a forgotten "Stop"
     // won't leave a trip recording forever while you're parked.
-    if (s.lastMoveTime) {
-      const stoppedMs = now - s.lastMoveTime;
+    if (lastMoveTime) {
+      const stoppedMs = now - lastMoveTime;
       if (stoppedMs > settings.stopMinutes * 60 * 1000) {
         void get().stopAndSave();
       }
@@ -136,12 +169,12 @@ export const useTracker = create<TrackerState>((set, get) => {
     }
   }
 
-  function handleNativePoint(p: { latitude: number; longitude: number; speed: number | null; time: number }) {
+  function handleNativePoint(p: { latitude: number; longitude: number; accuracy: number | null; speed: number | null; time: number }) {
     onPosition({
       coords: {
         latitude: p.latitude,
         longitude: p.longitude,
-        accuracy: 0,
+        accuracy: p.accuracy ?? 0,
         altitude: null,
         altitudeAccuracy: null,
         heading: null,
@@ -179,6 +212,7 @@ export const useTracker = create<TrackerState>((set, get) => {
     const g = geo();
     if (g && watchId !== null) g.clearWatch(watchId);
     watchId = null;
+    lastWatchPoint = null;
     if (isNativeApp()) void stopBackgroundTracking();
     set({ watching: false });
   }
@@ -216,6 +250,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         currentSpeed: 0,
         lastMoveTime: now,
       });
+      armAutoStopTimer();
     },
 
     stopAndSave: async () => {

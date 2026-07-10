@@ -17,6 +17,7 @@ let cachedIsNative: boolean | null = null;
 type NativeBgLocation = {
   latitude: number;
   longitude: number;
+  accuracy?: number | null;
   speed?: number | null;
   time?: number | null;
 };
@@ -67,6 +68,7 @@ export function isNativeApp(): boolean {
 export type BgLocationHandler = (pos: {
   latitude: number;
   longitude: number;
+  accuracy: number | null;
   speed: number | null;
   time: number;
 }) => void;
@@ -80,6 +82,7 @@ let bgWatcherId: string | null = null;
 export async function startBackgroundTracking(onPos: BgLocationHandler): Promise<boolean> {
   if (!isNativeApp()) return false;
   try {
+    await ensureNotificationPermission();
     const BG = await getBackgroundGeolocation();
     if (bgWatcherId) {
       try {
@@ -94,7 +97,7 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
         backgroundTitle: "Tracking mileage",
         requestPermissions: true,
         stale: false,
-        distanceFilter: 10,
+        distanceFilter: 5,
       },
       (location, error) => {
         if (error) {
@@ -106,6 +109,7 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
         onPos({
           latitude: location.latitude,
           longitude: location.longitude,
+          accuracy: location.accuracy ?? null,
           speed: location.speed ?? null,
           time: location.time ?? Date.now(),
         });
@@ -133,6 +137,7 @@ export async function stopBackgroundTracking(): Promise<void> {
 export async function requestNativeLocation(): Promise<boolean> {
   if (!isNativeApp()) return false;
   try {
+    await ensureNotificationPermission();
     const { Geolocation } = await import("@capacitor/geolocation");
     const status = await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
     return status.location === "granted" || status.coarseLocation === "granted";

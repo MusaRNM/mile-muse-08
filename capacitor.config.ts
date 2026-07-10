@@ -12,6 +12,7 @@ const config: CapacitorConfig = {
     captureInput: true,
     webContentsDebuggingEnabled: true,
     backgroundColor: "#0b0b0f",
+    useLegacyBridge: true,
   },
   plugins: {
     LocalNotifications: {

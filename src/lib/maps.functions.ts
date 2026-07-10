@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Reverse geocode via the Google Maps Platform connector (server-side).
@@ -9,11 +8,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * connector gateway from server env vars. If the connector isn't linked yet
  * we return null so callers can fall back to the client-side (Nominatim) path.
  *
- * Auth-gated: only signed-in users can invoke this so anonymous callers cannot
- * burn the app's paid Google Maps quota by hitting the RPC endpoint directly.
+ * This intentionally works without sign-in because MileTrack stores trips
+ * locally on-device; signed-out Android users still need start/end addresses.
  */
 export const reverseGeocodeGoogle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator((raw) =>
     z
       .object({
