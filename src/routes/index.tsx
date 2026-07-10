@@ -29,7 +29,7 @@ import {
   monthlySeries,
   type RangeKey,
 } from "@/lib/reports";
-import { metersToUnit, unitLabel, formatHours } from "@/lib/geo";
+import { formatDistance, formatHours, formatSpeed, metersToUnit, unitLabel } from "@/lib/geo";
 import { currentOdometerMeters, shouldPromptOdometerCheck } from "@/lib/odometer";
 
 export const Route = createFileRoute("/")({
@@ -61,7 +61,14 @@ function Dashboard() {
   const enableWatch = useTracker((s) => s.enableWatch);
   const watching = useTracker((s) => s.watching);
   const recording = useTracker((s) => s.recording);
+  const currentSpeed = useTracker((s) => s.currentSpeed);
+  const liveDistance = useTracker((s) => s.distanceMeters);
+  const lastFixAt = useTracker((s) => s.lastFixAt);
+  const lastAccuracy = useTracker((s) => s.lastAccuracyMeters);
+  const sampleCount = useTracker((s) => s.locationSampleCount);
+  const trackerError = useTracker((s) => s.error);
   const startManual = useTracker((s) => s.startManual);
+  const openLocationSettings = useTracker((s) => s.openLocationSettings);
 
   const t = trips ?? [];
   const f = fuel ?? [];
@@ -94,8 +101,10 @@ function Dashboard() {
 
   async function handleEnable() {
     const res = await requestPermission();
-    if (res === "granted" && autoDetect) enableWatch();
+    if (res === "granted") enableWatch();
   }
+
+  const lastFixText = lastFixAt ? `${Math.max(0, Math.round((Date.now() - lastFixAt) / 1000))}s ago` : "no fix";
 
   return (
     <div className="space-y-5">
@@ -106,12 +115,16 @@ function Dashboard() {
             <div className="space-y-1">
               <p className="text-sm font-semibold">Enable location tracking</p>
               <p className="text-xs text-muted-foreground">
-                MileTrack uses GPS to record your drives automatically. Tracking runs while the
-                app is open. {permission === "denied" && "Location is blocked — enable it in your browser settings."}
+                MileTrack uses GPS to record your drives automatically. On Android, allow precise location and background location.
               </p>
-              <Button size="sm" className="mt-2" onClick={handleEnable}>
-                Allow location
-              </Button>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button size="sm" onClick={handleEnable}>Allow location</Button>
+                {permission === "denied" && (
+                  <Button size="sm" variant="secondary" onClick={() => void openLocationSettings()}>
+                    Open settings
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -154,6 +167,25 @@ function Dashboard() {
               <Plus className="size-4" />
             </Button>
           </div>
+        )}
+        <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+          <div className="rounded-lg bg-primary-foreground/10 p-2">
+            <div className="opacity-75">Speed</div>
+            <div className="font-semibold tabular-nums">{formatSpeed(currentSpeed, unit)}</div>
+          </div>
+          <div className="rounded-lg bg-primary-foreground/10 p-2">
+            <div className="opacity-75">Distance</div>
+            <div className="font-semibold tabular-nums">{formatDistance(liveDistance, unit)}</div>
+          </div>
+          <div className="rounded-lg bg-primary-foreground/10 p-2">
+            <div className="opacity-75">GPS</div>
+            <div className="font-semibold tabular-nums">{sampleCount ? lastFixText : "waiting"}</div>
+          </div>
+        </div>
+        {(trackerError || lastAccuracy !== null) && (
+          <p className="mt-2 text-xs opacity-85">
+            {trackerError ?? `Accuracy ${Math.round(lastAccuracy ?? 0)}m`}
+          </p>
         )}
       </div>
 
