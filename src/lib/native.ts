@@ -36,6 +36,7 @@ type NativeBgLocationPlugin = {
     cb: (location?: NativeBgLocation, error?: NativeBgLocationError) => void,
   ) => Promise<string>;
   removeWatcher: (opts: { id: string }) => Promise<void>;
+  openSettings?: () => Promise<void>;
 };
 
 let backgroundGeolocation: NativeBgLocationPlugin | null = null;
@@ -143,6 +144,16 @@ export async function requestNativeLocation(): Promise<boolean> {
     return status.location === "granted" || status.coarseLocation === "granted";
   } catch {
     return false;
+  }
+}
+
+export async function openNativeLocationSettings(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    const BG = await getBackgroundGeolocation();
+    await BG.openSettings?.();
+  } catch {
+    /* ignore */
   }
 }
 

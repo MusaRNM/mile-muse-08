@@ -8,6 +8,7 @@ import {
   isNativeApp,
   notify,
   requestNativeLocation,
+  openNativeLocationSettings,
   startBackgroundTracking,
   stopBackgroundTracking,
 } from "./native";
@@ -31,6 +32,9 @@ interface TrackerState {
   currentSpeed: number; // m/s
   maxSpeed: number; // m/s
   lastMoveTime: number | null;
+  lastFixAt: number | null;
+  lastAccuracyMeters: number | null;
+  locationSampleCount: number;
 
   /** Trip id waiting for the user to classify (business/personal). */
   pendingClassifyId: string | null;
@@ -42,6 +46,7 @@ interface TrackerState {
   discard: () => void;
   clearPending: () => void;
   requestPermission: () => Promise<PermissionStatus>;
+  openLocationSettings: () => Promise<void>;
 }
 
 let watchId: number | null = null;
@@ -112,7 +117,13 @@ export const useTracker = create<TrackerState>((set, get) => {
     speed = Math.max(0, speed || 0);
     lastWatchPoint = point;
 
-    set({ permission: "granted", currentSpeed: speed });
+    set((state) => ({
+      permission: "granted",
+      currentSpeed: speed,
+      lastFixAt: now,
+      lastAccuracyMeters: Number.isFinite(accuracy) ? accuracy : null,
+      locationSampleCount: state.locationSampleCount + 1,
+    }));
 
     // Auto-start a trip when moving fast enough.
     if (!s.recording) {
@@ -190,6 +201,7 @@ export const useTracker = create<TrackerState>((set, get) => {
     if (isNativeApp()) {
       void startBackgroundTracking(handleNativePoint).then((ok) => {
         if (ok) set({ watching: true, error: null, permission: "granted" });
+        else set({ error: "Android background GPS did not start. Check location permissions." });
       });
       // Also start a foreground watch so the UI updates immediately even
       // before the background service delivers its first point.
@@ -229,6 +241,9 @@ export const useTracker = create<TrackerState>((set, get) => {
     currentSpeed: 0,
     maxSpeed: 0,
     lastMoveTime: null,
+    lastFixAt: null,
+    lastAccuracyMeters: null,
+    locationSampleCount: 0,
     pendingClassifyId: null,
 
     enableWatch: () => startWatch(),
@@ -310,6 +325,7 @@ export const useTracker = create<TrackerState>((set, get) => {
 
     discard: () => reset(),
     clearPending: () => set({ pendingClassifyId: null }),
+    openLocationSettings: () => openNativeLocationSettings(),
 
     requestPermission: async () => {
       // Native: use Capacitor Geolocation permissions API so the OS prompt
