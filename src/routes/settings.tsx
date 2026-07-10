@@ -75,6 +75,7 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const enableWatch = useTracker((st) => st.enableWatch);
   const disableWatch = useTracker((st) => st.disableWatch);
+  const requestPermission = useTracker((st) => st.requestPermission);
   const trips = useTrips() ?? [];
   const METERS_PER_UNIT = s.distanceUnit === "mi" ? 1609.344 : 1000;
   const currentMeters = currentOdometerMeters(
@@ -178,14 +179,26 @@ function SettingsPage() {
             <Row
               icon={<Radar className="size-4" />}
               title="Automatic detection"
-              desc="Start & stop trips automatically while the app is open"
+              desc="Start & stop trips automatically with Android background tracking"
             >
               <Switch
                 checked={s.autoDetect}
                 onCheckedChange={(v) => {
-                  s.update({ autoDetect: v });
-                  if (v) enableWatch();
-                  else disableWatch();
+                  if (!v) {
+                    s.update({ autoDetect: false });
+                    disableWatch();
+                    return;
+                  }
+                  void requestPermission().then((status) => {
+                    if (status === "granted") {
+                      s.update({ autoDetect: true });
+                      enableWatch();
+                      toast.success("Automatic trip detection enabled");
+                    } else {
+                      s.update({ autoDetect: false });
+                      toast.error("Location permission is required");
+                    }
+                  });
                 }}
               />
             </Row>

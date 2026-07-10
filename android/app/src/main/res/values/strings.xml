@@ -4,4 +4,7 @@
     <string name="title_activity_main">MileTrack</string>
     <string name="package_name">app.lovable.miletrack</string>
     <string name="custom_url_scheme">app.lovable.miletrack</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">Mileage tracking</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_icon</string>
+    <string name="capacitor_background_geolocation_notification_color">#d67a21</string>
 </resources>
