@@ -86,6 +86,7 @@ function StatusRow({
   icon,
   title,
   ok,
+  live,
   okText,
   badText,
   pendingText,
@@ -95,6 +96,7 @@ function StatusRow({
   icon: React.ReactNode;
   title: string;
   ok: boolean | null;
+  live?: boolean;
   okText: string;
   badText: string;
   pendingText: string;
@@ -111,6 +113,21 @@ function StatusRow({
             <p className="text-sm font-medium">{title}</p>
             {ok === true && <CheckCircle2 className="size-4 text-emerald-500" aria-label="OK" />}
             {ok === false && <XCircle className="size-4 text-destructive" aria-label="Needs attention" />}
+            {live && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                  ok ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+                }`}
+                aria-label="Live status"
+              >
+                <span
+                  className={`size-1.5 animate-pulse rounded-full ${
+                    ok ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                />
+                LIVE
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{desc}</p>
         </div>
