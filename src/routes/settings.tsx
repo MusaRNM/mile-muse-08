@@ -476,6 +476,15 @@ function SettingsPage() {
         >
           Privacy policy
         </a>
+        {" · "}
+        <a
+          href="/terms.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          Terms of use
+        </a>
       </p>
     </div>
   );
