@@ -197,7 +197,11 @@ function SettingsPage() {
       if (!isNativeApp()) return;
       try {
         const { App } = await import("@capacitor/app");
-        const h = await App.addListener("resume", () => refreshStatus());
+        const h = await App.addListener("resume", () => {
+          refreshStatus();
+          // User is back in the app — retire the live battery indicator.
+          stopBatteryLivePoll();
+        });
         cleanup = () => void h.remove();
       } catch {
         /* ignore */
