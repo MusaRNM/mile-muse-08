@@ -10,6 +10,8 @@ import {
   openBatteryOptimizationSettings,
   requestNativeLocation,
   checkLocationPermissionState,
+  showBatteryStatusNotification,
+  clearBatteryStatusNotification,
   type LocationPermissionState,
 } from "@/lib/native";
 
@@ -84,6 +86,7 @@ function StatusRow({
   icon,
   title,
   ok,
+  live,
   okText,
   badText,
   pendingText,
@@ -93,6 +96,7 @@ function StatusRow({
   icon: React.ReactNode;
   title: string;
   ok: boolean | null;
+  live?: boolean;
   okText: string;
   badText: string;
   pendingText: string;
@@ -109,6 +113,21 @@ function StatusRow({
             <p className="text-sm font-medium">{title}</p>
             {ok === true && <CheckCircle2 className="size-4 text-emerald-500" aria-label="OK" />}
             {ok === false && <XCircle className="size-4 text-destructive" aria-label="Needs attention" />}
+            {live && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                  ok ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+                }`}
+                aria-label="Live status"
+              >
+                <span
+                  className={`size-1.5 animate-pulse rounded-full ${
+                    ok ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                />
+                LIVE
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{desc}</p>
         </div>
@@ -138,7 +157,43 @@ function SettingsPage() {
   const [odoInput, setOdoInput] = useState("");
   const [native, setNative] = useState(false);
   const [batteryOk, setBatteryOk] = useState<boolean | null>(null);
+  const [batteryLive, setBatteryLive] = useState(false);
   const [locPerm, setLocPerm] = useState<LocationPermissionState | null>(null);
+  const batteryPollRef = useRef<number | null>(null);
+  const batteryPollTimeoutRef = useRef<number | null>(null);
+  const stopBatteryLivePoll = () => {
+    if (batteryPollRef.current !== null) {
+      clearInterval(batteryPollRef.current);
+      batteryPollRef.current = null;
+    }
+    if (batteryPollTimeoutRef.current !== null) {
+      clearTimeout(batteryPollTimeoutRef.current);
+      batteryPollTimeoutRef.current = null;
+    }
+    setBatteryLive(false);
+    void clearBatteryStatusNotification();
+  };
+  const startBatteryLivePoll = () => {
+    if (batteryPollRef.current !== null) return;
+    setBatteryLive(true);
+    // Seed the live notification with the current status right away.
+    void isIgnoringBatteryOptimizations().then((ok) => {
+      setBatteryOk(ok);
+      void showBatteryStatusNotification(ok);
+    });
+    batteryPollRef.current = window.setInterval(async () => {
+      const ok = await isIgnoringBatteryOptimizations();
+      setBatteryOk((prev) => {
+        if (prev !== ok) void showBatteryStatusNotification(ok);
+        return ok;
+      });
+    }, 1200);
+    // Safety cap: stop polling after 2 minutes so we never leak a timer or
+    // leave the notification stuck in the shade.
+    batteryPollTimeoutRef.current = window.setTimeout(() => {
+      stopBatteryLivePoll();
+    }, 120_000);
+  };
   const refreshBattery = () => {
     if (!isNativeApp()) return;
     void isIgnoringBatteryOptimizations().then(setBatteryOk);
@@ -159,13 +214,20 @@ function SettingsPage() {
       if (!isNativeApp()) return;
       try {
         const { App } = await import("@capacitor/app");
-        const h = await App.addListener("resume", () => refreshStatus());
+        const h = await App.addListener("resume", () => {
+          refreshStatus();
+          // User is back in the app — retire the live battery indicator.
+          stopBatteryLivePoll();
+        });
         cleanup = () => void h.remove();
       } catch {
         /* ignore */
       }
     })();
-    return () => cleanup?.();
+    return () => {
+      cleanup?.();
+      stopBatteryLivePoll();
+    };
   }, []);
   useEffect(() => {
     setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
@@ -386,18 +448,27 @@ function SettingsPage() {
                 icon={<BatteryCharging className="size-4" />}
                 title="Battery unrestricted"
                 ok={batteryOk}
+                live={batteryLive}
                 okText="Unrestricted — background GPS won't be paused."
                 badText="Battery optimization is enabled. Tap Fix to whitelist MileTrack."
                 pendingText="Checking…"
-                actionLabel={batteryOk ? "Recheck" : "Fix"}
+                actionLabel={batteryLive ? "Cancel" : batteryOk ? "Recheck" : "Fix"}
                 onAction={async () => {
+                  if (batteryLive) {
+                    stopBatteryLivePoll();
+                    return;
+                  }
+                  // Start the live indicator BEFORE leaving the app so the
+                  // status notification is already updating by the time the
+                  // user reaches the system battery-optimization screen.
+                  startBatteryLivePoll();
                   await requestIgnoreBatteryOptimizations();
                   setTimeout(async () => {
                     const ok = await isIgnoringBatteryOptimizations();
                     setBatteryOk(ok);
                     if (!ok) {
                       await openBatteryOptimizationSettings();
-                      toast.message("Find MileTrack and switch it off");
+                      toast.message("Find MileTrack — status updates live in the notification shade");
                     }
                   }, 1200);
                 }}
