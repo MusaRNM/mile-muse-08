@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { GoogleRouteMap } from "@/components/GoogleRouteMap";
+import { RouteMap } from "@/components/RouteMap";
 import { getTrip, saveTrip, deleteTrip } from "@/lib/db";
 import { useSettings } from "@/lib/settings";
 import { formatDistance, formatDuration, formatSpeed } from "@/lib/geo";
