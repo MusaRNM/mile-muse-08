@@ -191,9 +191,9 @@ These cannot be automated from source and remain your responsibility:
 4. **Data Safety form.** Enter the answers from `DATA_SAFETY.md`
    verbatim. Any drift here can cause a rejection or (worse) a
    post-launch policy strike.
-5. **Privacy policy URL.** Host `PRIVACY_POLICY.md` (rendered to HTML) at
-   a stable public URL, fill in the contact-email placeholder, and paste
-   the URL into the store listing.
+5. **Privacy policy URL.** Host `public/privacy-policy.html` at a stable
+   public URL (contact email is already set to
+   `MileTrack.Help@hotmail.com`) and paste the URL into the store listing.
 6. **Prominent disclosure.** Verify the on-screen permission explainer is
    shown *before* the system location prompt on a fresh install. It is,
    but re-check after any UI change.
