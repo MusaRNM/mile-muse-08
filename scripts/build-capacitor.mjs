@@ -2,9 +2,9 @@
 /**
  * Capacitor static-shell builder.
  *
- * TanStack Start outputs:
- *   .output/server  = SSR worker
- *   .output/public  = static client assets
+ * TanStack Start outputs can vary by template version:
+ *   dist/server or .output/server  = SSR worker
+ *   dist/client or .output/public  = static client assets
  *
  * Capacitor needs an actual index.html file inside the web directory.
  */
@@ -15,8 +15,9 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const CLIENT_DIR = path.join(ROOT, ".output", "public");
-const SERVER_DIR = path.join(ROOT, ".output", "server");
+const CAPACITOR_DIR = path.join(ROOT, ".output", "public");
+const CLIENT_DIRS = [path.join(ROOT, "dist", "client"), path.join(ROOT, ".output", "public")];
+const SERVER_DIRS = [path.join(ROOT, "dist", "server"), path.join(ROOT, ".output", "server")];
 const PORT = 8791;
 
 const IS_WINDOWS = process.platform === "win32";
@@ -62,8 +63,21 @@ async function main() {
 
   await run(NPX, ["vite", "build"]);
 
+  const CLIENT_DIR = CLIENT_DIRS.find((dir) => existsSync(dir));
+  const SERVER_DIR = SERVER_DIRS.find((dir) => existsSync(dir));
+
+  if (!CLIENT_DIR) {
+    throw new Error("client build output missing after build");
+  }
+
   if (!existsSync(SERVER_DIR)) {
-    throw new Error(".output/server missing after build");
+    throw new Error("server build output missing after build");
+  }
+
+  if (CLIENT_DIR !== CAPACITOR_DIR) {
+    await rm(CAPACITOR_DIR, { recursive: true, force: true });
+    await mkdir(path.dirname(CAPACITOR_DIR), { recursive: true });
+    await cp(CLIENT_DIR, CAPACITOR_DIR, { recursive: true });
   }
 
   await rm(path.join(ROOT, ".wrangler"), {
@@ -109,25 +123,25 @@ async function main() {
       throw new Error("SSR response was not HTML");
     }
 
-    await mkdir(CLIENT_DIR, {
+    await mkdir(CAPACITOR_DIR, {
       recursive: true,
     });
 
     await writeFile(
-      path.join(CLIENT_DIR, "index.html"),
+      path.join(CAPACITOR_DIR, "index.html"),
       html,
       "utf8"
     );
 
     await cp(
-      path.join(CLIENT_DIR, "index.html"),
-      path.join(CLIENT_DIR, "200.html")
+      path.join(CAPACITOR_DIR, "index.html"),
+      path.join(CAPACITOR_DIR, "200.html")
     );
 
     console.log(
       `✓ wrote ${path.relative(
         ROOT,
-        path.join(CLIENT_DIR, "index.html")
+        path.join(CAPACITOR_DIR, "index.html")
       )}`
     );
   } finally {
