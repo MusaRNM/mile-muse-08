@@ -548,7 +548,13 @@ export const useTracker = create<TrackerState>((set, get) => {
       armAutoStopTimer();
     },
 
-    discard: () => reset(),
+    discard: () => {
+      // If a draft row was flushed to IDB, remove it so a discarded trip
+      // doesn't reappear as a partial record.
+      const draftId = get().draftTripId;
+      if (draftId) void deleteTrip(draftId).catch(() => {/* ignore */});
+      reset();
+    },
     clearPending: () => set({ pendingClassifyId: null }),
     openLocationSettings: () => openNativeLocationSettings(),
 
