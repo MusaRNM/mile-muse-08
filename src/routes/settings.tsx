@@ -7,6 +7,7 @@ import {
   isIgnoringBatteryOptimizations,
   requestIgnoreBatteryOptimizations,
   openAppDetailsSettings,
+  requestNativeLocation,
 } from "@/lib/native";
 
 import { Switch } from "@/components/ui/switch";
