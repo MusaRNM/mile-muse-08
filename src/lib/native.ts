@@ -246,6 +246,7 @@ type AppSettingsPlugin = {
   isIgnoringBatteryOptimizations: () => Promise<{ ignoring: boolean }>;
   requestIgnoreBatteryOptimizations: () => Promise<void>;
   openAppDetailsSettings: () => Promise<void>;
+  openBatteryOptimizationSettings?: () => Promise<void>;
 };
 
 let appSettingsPlugin: AppSettingsPlugin | null = null;
@@ -281,6 +282,29 @@ export async function requestIgnoreBatteryOptimizations(): Promise<void> {
     await p.requestIgnoreBatteryOptimizations();
   } catch {
     /* ignore */
+  }
+}
+
+/**
+ * Opens the system-wide battery optimization list (or the app-info page as a
+ * fallback). Used as a retry when the direct one-tap prompt was dismissed or
+ * unavailable on the current OEM build.
+ */
+export async function openBatteryOptimizationSettings(): Promise<void> {
+  const p = await getAppSettings();
+  if (!p) return;
+  try {
+    if (p.openBatteryOptimizationSettings) {
+      await p.openBatteryOptimizationSettings();
+    } else {
+      await p.openAppDetailsSettings();
+    }
+  } catch {
+    try {
+      await p.openAppDetailsSettings();
+    } catch {
+      /* ignore */
+    }
   }
 }
 

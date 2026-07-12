@@ -7,6 +7,7 @@ import {
   isIgnoringBatteryOptimizations,
   requestIgnoreBatteryOptimizations,
   openAppDetailsSettings,
+  openBatteryOptimizationSettings,
   requestNativeLocation,
 } from "@/lib/native";
 
@@ -329,20 +330,71 @@ function SettingsPage() {
                   variant={batteryOk ? "outline" : "default"}
                   size="sm"
                   onClick={async () => {
-                    // Try the direct system prompt first.
-                    await requestIgnoreBatteryOptimizations();
-                    // Re-check after the user has had a moment to respond.
-                    // If it's still not whitelisted, fall back to the app
-                    // details page where they can tap "App battery usage →
-                    // Unrestricted" — this works on every Android OEM.
-                    setTimeout(async () => {
+                    // Escalation ladder:
+                    //   1) Direct one-tap system dialog (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    //   2) On resume, re-check. If still not whitelisted →
+                    //      open the battery-optimization list.
+                    //   3) On next resume, re-check. If STILL not whitelisted →
+                    //      open app details (works on every OEM).
+                    // Each step only fires if the previous one didn't stick,
+                    // and we always finish with an up-to-date UI state.
+                    let stage: 0 | 1 | 2 = 0;
+                    let resumeHandle: { remove: () => Promise<void> } | null = null;
+                    let settled = false;
+
+                    const finish = async () => {
+                      if (settled) return;
+                      settled = true;
+                      try {
+                        await resumeHandle?.remove();
+                      } catch {
+                        /* ignore */
+                      }
                       const ok = await isIgnoringBatteryOptimizations();
                       setBatteryOk(ok);
-                      if (!ok) {
-                        void openAppDetailsSettings();
-                        toast.message("Tap App battery usage → Unrestricted");
+                      if (ok) {
+                        toast.success("Battery optimization disabled for MileTrack");
                       }
-                    }, 1200);
+                    };
+
+                    const onResume = async () => {
+                      const ok = await isIgnoringBatteryOptimizations();
+                      setBatteryOk(ok);
+                      if (ok) {
+                        await finish();
+                        return;
+                      }
+                      if (stage === 0) {
+                        stage = 1;
+                        toast.message("Find MileTrack and switch it off");
+                        await openBatteryOptimizationSettings();
+                      } else if (stage === 1) {
+                        stage = 2;
+                        toast.message("Tap App battery usage → Unrestricted");
+                        await openAppDetailsSettings();
+                      } else {
+                        await finish();
+                      }
+                    };
+
+                    try {
+                      const { App } = await import("@capacitor/app");
+                      resumeHandle = await App.addListener("resume", () => {
+                        void onResume();
+                      });
+                    } catch {
+                      /* ignore — we'll fall back to a timed re-check */
+                    }
+
+                    // Kick off the first attempt.
+                    await requestIgnoreBatteryOptimizations();
+
+                    // Safety net: if no resume event arrives within 30s
+                    // (user backgrounded elsewhere, prompt suppressed, etc.),
+                    // clean up so we don't leak the listener.
+                    setTimeout(() => {
+                      void finish();
+                    }, 30_000);
                   }}
                 >
                   {batteryOk ? "Recheck" : "Fix"}

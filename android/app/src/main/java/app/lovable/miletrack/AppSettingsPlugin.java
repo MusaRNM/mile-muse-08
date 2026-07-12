@@ -72,4 +72,29 @@ public class AppSettingsPlugin extends Plugin {
             call.reject("Unable to open app details settings", e);
         }
     }
+
+    @PluginMethod
+    public void openBatteryOptimizationSettings(PluginCall call) {
+        Context ctx = getContext();
+        // Prefer the system-wide list where the user can find MileTrack
+        // and toggle it. Available since API 23.
+        try {
+            Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(intent);
+            call.resolve();
+            return;
+        } catch (Exception ignored) {
+            // Some OEM builds strip this activity — fall through.
+        }
+        try {
+            Intent fallback = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            fallback.setData(Uri.parse("package:" + ctx.getPackageName()));
+            fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(fallback);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Unable to open battery settings", e);
+        }
+    }
 }
