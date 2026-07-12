@@ -70,7 +70,7 @@ async function main() {
     throw new Error("client build output missing after build");
   }
 
-  if (!existsSync(SERVER_DIR)) {
+  if (!SERVER_DIR) {
     throw new Error("server build output missing after build");
   }
 
