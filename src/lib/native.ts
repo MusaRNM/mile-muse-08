@@ -242,11 +242,18 @@ export async function openNativeLocationSettings(): Promise<void> {
   }
 }
 
+export type LocationPermissionState = {
+  fine: boolean;
+  coarse: boolean;
+  background: boolean;
+};
+
 type AppSettingsPlugin = {
   isIgnoringBatteryOptimizations: () => Promise<{ ignoring: boolean }>;
   requestIgnoreBatteryOptimizations: () => Promise<void>;
   openAppDetailsSettings: () => Promise<void>;
   openBatteryOptimizationSettings?: () => Promise<void>;
+  checkLocationPermissions?: () => Promise<LocationPermissionState>;
 };
 
 let appSettingsPlugin: AppSettingsPlugin | null = null;
