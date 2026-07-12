@@ -94,8 +94,7 @@ Manual smoke test before publishing:
      also works and is already live.
 - Paste the chosen URL into Play Console → **App content → Privacy
   policy**.
-- Before submitting, edit the file and replace the placeholder support
-  email in section 10.
+- Support email in section 10 is set to `MileTrack.Help@hotmail.com`.
 
 ---
 
