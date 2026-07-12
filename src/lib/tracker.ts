@@ -85,6 +85,7 @@ type ActiveTripSnapshot = Pick<
   | "maxSpeed"
   | "lastMoveTime"
   | "stationarySince"
+  | "draftTripId"
 >;
 
 function geo(): Geolocation | null {
