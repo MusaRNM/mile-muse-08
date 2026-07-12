@@ -96,13 +96,34 @@ function SettingsPage() {
   const [odoInput, setOdoInput] = useState("");
   const [native, setNative] = useState(false);
   const [batteryOk, setBatteryOk] = useState<boolean | null>(null);
+  const [locPerm, setLocPerm] = useState<LocationPermissionState | null>(null);
   const refreshBattery = () => {
     if (!isNativeApp()) return;
     void isIgnoringBatteryOptimizations().then(setBatteryOk);
   };
+  const refreshLocation = () => {
+    void checkLocationPermissionState().then(setLocPerm);
+  };
+  const refreshStatus = () => {
+    refreshBattery();
+    refreshLocation();
+  };
   useEffect(() => {
     setNative(isNativeApp());
-    refreshBattery();
+    refreshStatus();
+    // Re-check whenever the user returns to the app after visiting Settings.
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      if (!isNativeApp()) return;
+      try {
+        const { App } = await import("@capacitor/app");
+        const h = await App.addListener("resume", () => refreshStatus());
+        cleanup = () => void h.remove();
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => cleanup?.();
   }, []);
   useEffect(() => {
     setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
