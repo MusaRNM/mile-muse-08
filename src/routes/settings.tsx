@@ -80,6 +80,48 @@ function Row({
   );
 }
 
+function StatusRow({
+  icon,
+  title,
+  ok,
+  okText,
+  badText,
+  pendingText,
+  actionLabel,
+  onAction,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  ok: boolean | null;
+  okText: string;
+  badText: string;
+  pendingText: string;
+  actionLabel: string;
+  onAction: () => void | Promise<void>;
+}) {
+  const desc = ok === null ? pendingText : ok ? okText : badText;
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 text-muted-foreground">{icon}</span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">{title}</p>
+            {ok === true && <CheckCircle2 className="size-4 text-emerald-500" aria-label="OK" />}
+            {ok === false && <XCircle className="size-4 text-destructive" aria-label="Needs attention" />}
+          </div>
+          <p className="text-xs text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+      <div className="shrink-0">
+        <Button variant={ok ? "outline" : "default"} size="sm" onClick={() => void onAction()}>
+          {actionLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage() {
   const s = useSettings();
   const fileRef = useRef<HTMLInputElement>(null);
