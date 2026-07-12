@@ -140,7 +140,43 @@ function SettingsPage() {
   const [odoInput, setOdoInput] = useState("");
   const [native, setNative] = useState(false);
   const [batteryOk, setBatteryOk] = useState<boolean | null>(null);
+  const [batteryLive, setBatteryLive] = useState(false);
   const [locPerm, setLocPerm] = useState<LocationPermissionState | null>(null);
+  const batteryPollRef = useRef<number | null>(null);
+  const batteryPollTimeoutRef = useRef<number | null>(null);
+  const stopBatteryLivePoll = () => {
+    if (batteryPollRef.current !== null) {
+      clearInterval(batteryPollRef.current);
+      batteryPollRef.current = null;
+    }
+    if (batteryPollTimeoutRef.current !== null) {
+      clearTimeout(batteryPollTimeoutRef.current);
+      batteryPollTimeoutRef.current = null;
+    }
+    setBatteryLive(false);
+    void clearBatteryStatusNotification();
+  };
+  const startBatteryLivePoll = () => {
+    if (batteryPollRef.current !== null) return;
+    setBatteryLive(true);
+    // Seed the live notification with the current status right away.
+    void isIgnoringBatteryOptimizations().then((ok) => {
+      setBatteryOk(ok);
+      void showBatteryStatusNotification(ok);
+    });
+    batteryPollRef.current = window.setInterval(async () => {
+      const ok = await isIgnoringBatteryOptimizations();
+      setBatteryOk((prev) => {
+        if (prev !== ok) void showBatteryStatusNotification(ok);
+        return ok;
+      });
+    }, 1200);
+    // Safety cap: stop polling after 2 minutes so we never leak a timer or
+    // leave the notification stuck in the shade.
+    batteryPollTimeoutRef.current = window.setTimeout(() => {
+      stopBatteryLivePoll();
+    }, 120_000);
+  };
   const refreshBattery = () => {
     if (!isNativeApp()) return;
     void isIgnoringBatteryOptimizations().then(setBatteryOk);
