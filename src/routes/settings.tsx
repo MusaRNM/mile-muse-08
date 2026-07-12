@@ -221,6 +221,22 @@ function SettingsPage() {
             <div className="px-4 py-3.5">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-3 text-sm font-medium">
+                  <Gauge className="size-4 text-muted-foreground" /> Stop speed threshold
+                </span>
+                <span className="text-sm font-semibold tabular-nums">{s.stopThresholdMph} mph</span>
+              </div>
+              <Slider
+                className="mt-3"
+                min={1}
+                max={15}
+                step={1}
+                value={[s.stopThresholdMph]}
+                onValueChange={([v]) => s.update({ stopThresholdMph: v })}
+              />
+            </div>
+            <div className="px-4 py-3.5">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-3 text-sm font-medium">
                   <Timer className="size-4 text-muted-foreground" /> Auto-stop after
                 </span>
                 <span className="text-sm font-semibold tabular-nums">{s.stopMinutes} min</span>

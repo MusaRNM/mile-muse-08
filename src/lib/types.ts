@@ -66,6 +66,8 @@ export interface AppSettings {
   autoDetect: boolean;
   /** Speed threshold to start a trip, stored in mph. */
   startThresholdMph: number;
+  /** Speed threshold below which the auto-stop timer runs, stored in mph. */
+  stopThresholdMph: number;
   /** Minutes stopped before a trip auto-ends. */
   stopMinutes: number;
   /** Prompt to classify a trip when it ends. */
@@ -92,6 +94,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   distanceUnit: "mi",
   autoDetect: false, // must be an explicit opt-in — see TrackerBootstrap
   startThresholdMph: 10,
+  stopThresholdMph: 5,
   stopMinutes: 3,
   promptOnEnd: true,
   irsRatePerMile: 0.7, // 2025 IRS standard business mileage rate

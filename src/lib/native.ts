@@ -14,6 +14,11 @@
 
 let cachedIsNative: boolean | null = null;
 
+export const TRIP_STOP_ACTION_TYPE = "trip-stop-actions";
+export const TRIP_STOP_END_ACTION = "end-trip";
+export const TRIP_STOP_TRAFFIC_ACTION = "traffic";
+const TRIP_STOP_NOTIFICATION_ID = 230501;
+
 type NativeBgLocation = {
   latitude: number;
   longitude: number;
@@ -75,6 +80,8 @@ export type BgLocationHandler = (pos: {
 }) => void;
 
 let bgWatcherId: string | null = null;
+let notificationActionsReady = false;
+let notificationActionListenerReady = false;
 
 /**
  * Start continuous background GPS. Silent no-op on web (browser tracking
@@ -94,8 +101,8 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
     }
     bgWatcherId = await BG.addWatcher(
       {
-        backgroundMessage: "MileTrack is recording your drive.",
-        backgroundTitle: "Tracking mileage",
+        backgroundMessage: "MileTrack is watching for driving and recording mileage.",
+        backgroundTitle: "Mileage tracking active",
         requestPermissions: true,
         stale: false,
         distanceFilter: 5,
@@ -121,6 +128,74 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
     // eslint-disable-next-line no-console
     console.warn("[native] background tracking unavailable", err);
     return false;
+  }
+}
+
+export async function registerTripStopNotificationActions(onAction: (action: "end" | "traffic") => void): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    if (!notificationActionsReady) {
+      await LocalNotifications.registerActionTypes({
+        types: [
+          {
+            id: TRIP_STOP_ACTION_TYPE,
+            actions: [
+              { id: TRIP_STOP_END_ACTION, title: "End Trip" },
+              { id: TRIP_STOP_TRAFFIC_ACTION, title: "I'm in Traffic" },
+            ],
+          },
+        ],
+      });
+      notificationActionsReady = true;
+    }
+    if (!notificationActionListenerReady) {
+      await LocalNotifications.addListener("localNotificationActionPerformed", (event) => {
+        if (event.notification?.extra?.kind !== "trip-stop") return;
+        if (event.actionId === TRIP_STOP_END_ACTION) onAction("end");
+        if (event.actionId === TRIP_STOP_TRAFFIC_ACTION) onAction("traffic");
+      });
+      notificationActionListenerReady = true;
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function notifyTripAppearsEnded(): Promise<void> {
+  if (isNativeApp()) {
+    try {
+      const { LocalNotifications } = await import("@capacitor/local-notifications");
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: TRIP_STOP_NOTIFICATION_ID,
+            title: "Trip appears to have ended.",
+            body: "End the trip or keep recording if you're in traffic.",
+            actionTypeId: TRIP_STOP_ACTION_TYPE,
+            extra: { kind: "trip-stop" },
+            ongoing: true,
+            autoCancel: false,
+            schedule: { at: new Date(Date.now() + 100), allowWhileIdle: true },
+          },
+        ],
+      });
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  await notify("Trip appears to have ended.", "End the trip or keep recording if you're in traffic.");
+}
+
+export async function clearTripStopNotification(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: TRIP_STOP_NOTIFICATION_ID }] });
+    await LocalNotifications.removeDeliveredNotifications({ notifications: [{ id: TRIP_STOP_NOTIFICATION_ID }] });
+  } catch {
+    /* ignore */
   }
 }
 

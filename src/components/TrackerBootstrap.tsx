@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTracker } from "@/lib/tracker";
 import { useSettings } from "@/lib/settings";
+import { isNativeApp } from "@/lib/native";
 
 /**
  * Runs once on the client. Syncs the current geolocation permission state and,
@@ -19,6 +20,11 @@ export function TrackerBootstrap() {
     let cancelled = false;
 
     async function init() {
+      if (autoDetect && isNativeApp()) {
+        useTracker.setState({ permission: "granted" });
+        enableWatch();
+        return;
+      }
       if (typeof navigator === "undefined") return;
       let granted = false;
       if ("permissions" in navigator) {
