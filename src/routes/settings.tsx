@@ -277,6 +277,57 @@ function SettingsPage() {
         </div>
       </section>
 
+      {native && (
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Android permissions
+          </h2>
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="divide-y">
+              <Row
+                icon={<ShieldCheck className="size-4" />}
+                title="Location access"
+                desc="Set to Allow all the time so trips keep recording with the screen off or another app open."
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    void openAppDetailsSettings();
+                    toast.message("Tap Permissions → Location → Allow all the time");
+                  }}
+                >
+                  Open
+                </Button>
+              </Row>
+              <Row
+                icon={<BatteryCharging className="size-4" />}
+                title="Battery optimization"
+                desc={
+                  batteryOk === null
+                    ? "Disable so Android doesn't pause GPS in the background."
+                    : batteryOk
+                      ? "Disabled for MileTrack — background GPS won't be paused."
+                      : "Currently enabled. Tap Fix to whitelist MileTrack."
+                }
+              >
+                <Button
+                  variant={batteryOk ? "outline" : "default"}
+                  size="sm"
+                  onClick={async () => {
+                    await requestIgnoreBatteryOptimizations();
+                    setTimeout(refreshBattery, 800);
+                  }}
+                >
+                  {batteryOk ? "Recheck" : "Fix"}
+                </Button>
+              </Row>
+            </div>
+          </div>
+        </section>
+      )}
+
+
       <section>
         <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Privacy
