@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTracker } from "@/lib/tracker";
 import { useSettings } from "@/lib/settings";
+import { isNativeApp } from "@/lib/native";
 
 /**
  * Runs once on the client. Syncs the current geolocation permission state and,
@@ -13,12 +14,30 @@ import { useSettings } from "@/lib/settings";
  */
 export function TrackerBootstrap() {
   const enableWatch = useTracker((s) => s.enableWatch);
+  const recording = useTracker((s) => s.recording);
   const autoDetect = useSettings((s) => s.autoDetect);
 
   useEffect(() => {
     let cancelled = false;
+    let cleanupResume: (() => void) | undefined;
 
     async function init() {
+      if ((autoDetect || recording) && isNativeApp()) {
+        useTracker.setState({ permission: "granted" });
+        enableWatch();
+        try {
+          const { App } = await import("@capacitor/app");
+          const resumeHandle = await App.addListener("resume", () => {
+            if (useSettings.getState().autoDetect || useTracker.getState().recording) {
+              useTracker.getState().enableWatch();
+            }
+          });
+          cleanupResume = () => void resumeHandle.remove();
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
       if (typeof navigator === "undefined") return;
       let granted = false;
       if ("permissions" in navigator) {
@@ -49,7 +68,7 @@ export function TrackerBootstrap() {
           /* permissions API not available; ignore */
         }
       }
-      if (!cancelled && granted && autoDetect) {
+      if (!cancelled && granted && (autoDetect || recording)) {
         enableWatch();
       }
     }
@@ -57,8 +76,9 @@ export function TrackerBootstrap() {
     void init();
     return () => {
       cancelled = true;
+      cleanupResume?.();
     };
-  }, [autoDetect, enableWatch]);
+  }, [autoDetect, enableWatch, recording]);
 
   return null;
 }

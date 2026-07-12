@@ -4,11 +4,14 @@ import { formatSpeed, haversine, mphToMps, pathDistance, reverseGeocode, simplif
 import { useSettings } from "./settings";
 import type { TrackPoint, Trip } from "./types";
 import {
+  clearTripStopNotification,
   ensureNotificationPermission,
   isNativeApp,
   notify,
+  notifyTripAppearsEnded,
   requestNativeLocation,
   openNativeLocationSettings,
+  registerTripStopNotificationActions,
   startBackgroundTracking,
   stopBackgroundTracking,
 } from "./native";
@@ -24,6 +27,7 @@ interface TrackerState {
   manual: boolean;
   permission: PermissionStatus;
   error: string | null;
+  stopPromptOpen: boolean;
 
   // Live stats for the active trip
   path: TrackPoint[];
@@ -35,6 +39,7 @@ interface TrackerState {
   lastFixAt: number | null;
   lastAccuracyMeters: number | null;
   locationSampleCount: number;
+  stationarySince: number | null;
 
   /** Trip id waiting for the user to classify (business/personal). */
   pendingClassifyId: string | null;
@@ -43,6 +48,7 @@ interface TrackerState {
   disableWatch: () => void;
   startManual: () => void;
   stopAndSave: () => Promise<string | null>;
+  continueInTraffic: () => void;
   discard: () => void;
   clearPending: () => void;
   requestPermission: () => Promise<PermissionStatus>;
@@ -52,10 +58,50 @@ interface TrackerState {
 let watchId: number | null = null;
 let lastWatchPoint: TrackPoint | null = null;
 let autoStopTimer: ReturnType<typeof setInterval> | null = null;
+let nativeActionsRegistered = false;
+
+const ACTIVE_TRIP_KEY = "miletrack-active-trip-v2";
+const MAX_REASONABLE_SPEED_MPS = mphToMps(130);
+
+type ActiveTripSnapshot = Pick<
+  TrackerState,
+  | "recording"
+  | "manual"
+  | "path"
+  | "startTime"
+  | "distanceMeters"
+  | "currentSpeed"
+  | "maxSpeed"
+  | "lastMoveTime"
+  | "stationarySince"
+>;
 
 function geo(): Geolocation | null {
   if (typeof navigator === "undefined" || !("geolocation" in navigator)) return null;
   return navigator.geolocation;
+}
+
+function loadActiveTripSnapshot(): ActiveTripSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_TRIP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ActiveTripSnapshot;
+    if (!parsed.recording || !parsed.startTime || !Array.isArray(parsed.path)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveTripSnapshot(snapshot: ActiveTripSnapshot | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!snapshot?.recording) window.localStorage.removeItem(ACTIVE_TRIP_KEY);
+    else window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(snapshot));
+  } catch {
+    /* ignore */
+  }
 }
 
 export const useTracker = create<TrackerState>((set, get) => {
@@ -68,25 +114,78 @@ export const useTracker = create<TrackerState>((set, get) => {
     if (autoStopTimer) return;
     autoStopTimer = setInterval(() => {
       const state = get();
-      if (!state.recording || !state.lastMoveTime) return;
-      const stoppedMs = Date.now() - state.lastMoveTime;
-      if (stoppedMs > useSettings.getState().stopMinutes * 60 * 1000) {
-        void state.stopAndSave();
+      if (!state.recording || !state.stationarySince || state.stopPromptOpen) return;
+      const stoppedMs = Date.now() - state.stationarySince;
+      if (stoppedMs >= useSettings.getState().stopMinutes * 60 * 1000) {
+        triggerStopPrompt();
       }
     }, 30_000);
   }
 
-  function reset() {
+  function persistCurrentTrip() {
+    const state = get();
+    saveActiveTripSnapshot({
+      recording: state.recording,
+      manual: state.manual,
+      path: state.path,
+      startTime: state.startTime,
+      distanceMeters: state.distanceMeters,
+      currentSpeed: state.currentSpeed,
+      maxSpeed: state.maxSpeed,
+      lastMoveTime: state.lastMoveTime,
+      stationarySince: state.stationarySince,
+    });
+  }
+
+  function updateTripState(patch: Partial<TrackerState>) {
+    set(patch);
+    persistCurrentTrip();
+  }
+
+  function triggerStopPrompt() {
+    const state = get();
+    if (!state.recording || state.stopPromptOpen) return;
+    set({ stopPromptOpen: true });
+    void notifyTripAppearsEnded();
+  }
+
+  function calculateSpeed(point: TrackPoint, reportedSpeed: number | null | undefined, previous: TrackPoint | null) {
+    let speed = typeof reportedSpeed === "number" && Number.isFinite(reportedSpeed) ? reportedSpeed : 0;
+    if (speed <= 0 && previous) {
+      const dt = (point.t - previous.t) / 1000;
+      const distance = haversine(previous, point);
+      if (dt >= 1 && dt <= 180 && distance >= 3) speed = distance / dt;
+    }
+    if (!Number.isFinite(speed) || speed < 0) return 0;
+    if (speed > MAX_REASONABLE_SPEED_MPS) return 0;
+    return speed;
+  }
+
+  function reset(keepWatching = true) {
     clearAutoStopTimer();
+    void clearTripStopNotification();
+    saveActiveTripSnapshot(null);
+    if (!keepWatching || !useSettings.getState().autoDetect) {
+      if (isNativeApp()) void stopBackgroundTracking();
+      const g = geo();
+      if (g && watchId !== null) g.clearWatch(watchId);
+      watchId = null;
+      lastWatchPoint = null;
+      set({ watching: false });
+    } else if (isNativeApp()) {
+      void startBackgroundTracking(handleNativePoint, "detect");
+    }
     set({
       recording: false,
       manual: false,
+      stopPromptOpen: false,
       path: [],
       startTime: null,
       distanceMeters: 0,
       currentSpeed: 0,
       maxSpeed: 0,
       lastMoveTime: null,
+      stationarySince: null,
     });
   }
 
@@ -94,6 +193,7 @@ export const useTracker = create<TrackerState>((set, get) => {
     const s = get();
     const settings = useSettings.getState();
     const startMps = mphToMps(settings.startThresholdMph);
+    const stopMps = mphToMps(settings.stopThresholdMph);
     const now = pos.timestamp || Date.now();
     const accuracy = pos.coords.accuracy;
     if (Number.isFinite(accuracy) && accuracy > 500) return;
@@ -107,14 +207,7 @@ export const useTracker = create<TrackerState>((set, get) => {
     // Android GPS often reports `speed: null`; derive it from consecutive
     // samples so auto-start and live mph still work.
     const previousWatchPoint = lastWatchPoint;
-    let speed = typeof pos.coords.speed === "number" && Number.isFinite(pos.coords.speed) ? pos.coords.speed : 0;
-    if (speed <= 0 && previousWatchPoint) {
-      const prev = previousWatchPoint;
-      const dt = (now - prev.t) / 1000;
-      const distance = haversine(prev, point);
-      if (dt >= 1 && dt <= 180 && distance >= 3) speed = distance / dt;
-    }
-    speed = Math.max(0, speed || 0);
+    const speed = calculateSpeed(point, pos.coords.speed, previousWatchPoint);
     lastWatchPoint = point;
 
     set((state) => ({
@@ -132,42 +225,50 @@ export const useTracker = create<TrackerState>((set, get) => {
           previousWatchPoint && now - previousWatchPoint.t <= 120_000
             ? [previousWatchPoint, point]
             : [point];
-        set({
+        updateTripState({
           recording: true,
           manual: false,
+          stopPromptOpen: false,
           startTime: now,
           path: startingPath,
           distanceMeters: pathDistance(startingPath),
           maxSpeed: speed,
           lastMoveTime: now,
+          stationarySince: null,
         });
         armAutoStopTimer();
+        if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
         void notify("Auto trip recording started", `MileTrack is tracking at ${formatSpeed(speed, settings.distanceUnit)}.`);
       }
       return;
     }
 
     // Recording: append point and update stats.
+    const moving = speed >= stopMps;
+    if (s.stopPromptOpen && !moving) {
+      updateTripState({ stationarySince: s.stationarySince ?? now });
+      return;
+    }
     const path = [...s.path, point];
     const distanceMeters = s.distanceMeters + (s.path.length ? haversine(s.path[s.path.length - 1], point) : 0);
     const maxSpeed = Math.max(s.maxSpeed, speed);
-    const moving = speed >= mphToMps(3);
     const lastMoveTime = moving ? now : s.lastMoveTime;
-    set({
+    const stationarySince = moving ? null : s.stationarySince ?? now;
+    updateTripState({
       path,
       distanceMeters,
       maxSpeed,
       lastMoveTime,
+      stationarySince,
+      stopPromptOpen: moving ? false : s.stopPromptOpen,
     });
 
-    // Auto-end after being stopped for the configured number of minutes.
-    // Applies to BOTH manual and auto-detected trips so a forgotten "Stop"
-    // won't leave a trip recording forever while you're parked.
-    if (lastMoveTime) {
-      const stoppedMs = now - lastMoveTime;
-      if (stoppedMs > settings.stopMinutes * 60 * 1000) {
-        void get().stopAndSave();
-      }
+    if (moving && s.stopPromptOpen) void clearTripStopNotification();
+
+    // Auto-prompt after staying below the configured stop threshold.
+    // Do not require 0 mph; slow traffic can continue by tapping "I'm in Traffic".
+    if (stationarySince && now - stationarySince >= settings.stopMinutes * 60 * 1000) {
+      triggerStopPrompt();
     }
   }
 
@@ -199,12 +300,19 @@ export const useTracker = create<TrackerState>((set, get) => {
     // Prefer background-capable native tracking on iOS/Android; falls back
     // to browser watchPosition otherwise.
     if (isNativeApp()) {
-      void startBackgroundTracking(handleNativePoint).then((ok) => {
+      if (!nativeActionsRegistered) {
+        nativeActionsRegistered = true;
+        void registerTripStopNotificationActions((action) => {
+          if (action === "end") void get().stopAndSave();
+          else get().continueInTraffic();
+        });
+      }
+      void startBackgroundTracking(handleNativePoint, get().recording ? "record" : "detect").then((ok) => {
         if (ok) set({ watching: true, error: null, permission: "granted" });
         else set({ error: "Android background GPS did not start. Check location permissions." });
       });
-      // Also start a foreground watch so the UI updates immediately even
-      // before the background service delivers its first point.
+      if (get().recording) armAutoStopTimer();
+      return;
     }
     const g = geo();
     if (!g) {
@@ -217,6 +325,7 @@ export const useTracker = create<TrackerState>((set, get) => {
       maximumAge: 2000,
       timeout: 20000,
     });
+    if (get().recording) armAutoStopTimer();
     set({ watching: true, error: null });
   }
 
@@ -225,31 +334,35 @@ export const useTracker = create<TrackerState>((set, get) => {
     if (g && watchId !== null) g.clearWatch(watchId);
     watchId = null;
     lastWatchPoint = null;
-    if (isNativeApp()) void stopBackgroundTracking();
+    if (isNativeApp() && !get().recording) void stopBackgroundTracking();
     set({ watching: false });
   }
 
+  const recovered = loadActiveTripSnapshot();
+
   return {
     watching: false,
-    recording: false,
-    manual: false,
+    recording: recovered?.recording ?? false,
+    manual: recovered?.manual ?? false,
     permission: "unknown",
     error: null,
-    path: [],
-    startTime: null,
-    distanceMeters: 0,
-    currentSpeed: 0,
-    maxSpeed: 0,
-    lastMoveTime: null,
+    stopPromptOpen: false,
+    path: recovered?.path ?? [],
+    startTime: recovered?.startTime ?? null,
+    distanceMeters: recovered?.distanceMeters ?? 0,
+    currentSpeed: recovered?.currentSpeed ?? 0,
+    maxSpeed: recovered?.maxSpeed ?? 0,
+    lastMoveTime: recovered?.lastMoveTime ?? null,
     lastFixAt: null,
     lastAccuracyMeters: null,
     locationSampleCount: 0,
+    stationarySince: recovered?.stationarySince ?? null,
     pendingClassifyId: null,
 
     enableWatch: () => startWatch(),
     disableWatch: () => {
+      reset(false);
       stopWatch();
-      reset();
     },
 
     startManual: () => {
@@ -258,13 +371,17 @@ export const useTracker = create<TrackerState>((set, get) => {
       set({
         recording: true,
         manual: true,
+        stopPromptOpen: false,
         startTime: now,
         path: [],
         distanceMeters: 0,
         maxSpeed: 0,
         currentSpeed: 0,
         lastMoveTime: now,
+        stationarySince: null,
       });
+      persistCurrentTrip();
+      if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
       armAutoStopTimer();
     },
 
@@ -321,6 +438,14 @@ export const useTracker = create<TrackerState>((set, get) => {
         await saveTrip({ ...trip, startAddress, endAddress, updatedAt: Date.now() });
       }
       return id;
+    },
+
+    continueInTraffic: () => {
+      const now = Date.now();
+      set({ stopPromptOpen: false, stationarySince: now, lastMoveTime: now });
+      persistCurrentTrip();
+      void clearTripStopNotification();
+      armAutoStopTimer();
     },
 
     discard: () => reset(),
