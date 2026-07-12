@@ -79,6 +79,8 @@ export type BgLocationHandler = (pos: {
   time: number;
 }) => void;
 
+type TrackingMode = "detect" | "record";
+
 let bgWatcherId: string | null = null;
 let notificationActionsReady = false;
 let notificationActionListenerReady = false;
@@ -87,7 +89,7 @@ let notificationActionListenerReady = false;
  * Start continuous background GPS. Silent no-op on web (browser tracking
  * is handled by the existing navigator.geolocation.watchPosition path).
  */
-export async function startBackgroundTracking(onPos: BgLocationHandler): Promise<boolean> {
+export async function startBackgroundTracking(onPos: BgLocationHandler, mode: TrackingMode = "detect"): Promise<boolean> {
   if (!isNativeApp()) return false;
   try {
     await ensureNotificationPermission();
@@ -99,13 +101,16 @@ export async function startBackgroundTracking(onPos: BgLocationHandler): Promise
         /* ignore */
       }
     }
+    const recording = mode === "record";
     bgWatcherId = await BG.addWatcher(
       {
-        backgroundMessage: "MileTrack is watching for driving and recording mileage.",
-        backgroundTitle: "Mileage tracking active",
+        backgroundMessage: recording
+          ? "MileTrack is recording your drive."
+          : "MileTrack is watching for driving.",
+        backgroundTitle: recording ? "Recording mileage" : "Mileage auto-detect active",
         requestPermissions: true,
         stale: false,
-        distanceFilter: 5,
+        distanceFilter: recording ? 0 : 5,
       },
       (location, error) => {
         if (error) {

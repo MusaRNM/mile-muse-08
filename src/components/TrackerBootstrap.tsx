@@ -19,11 +19,23 @@ export function TrackerBootstrap() {
 
   useEffect(() => {
     let cancelled = false;
+    let cleanupResume: (() => void) | undefined;
 
     async function init() {
       if ((autoDetect || recording) && isNativeApp()) {
         useTracker.setState({ permission: "granted" });
         enableWatch();
+        try {
+          const { App } = await import("@capacitor/app");
+          const resumeHandle = await App.addListener("resume", () => {
+            if (useSettings.getState().autoDetect || useTracker.getState().recording) {
+              useTracker.getState().enableWatch();
+            }
+          });
+          cleanupResume = () => void resumeHandle.remove();
+        } catch {
+          /* ignore */
+        }
         return;
       }
       if (typeof navigator === "undefined") return;
@@ -64,6 +76,7 @@ export function TrackerBootstrap() {
     void init();
     return () => {
       cancelled = true;
+      cleanupResume?.();
     };
   }, [autoDetect, enableWatch, recording]);
 

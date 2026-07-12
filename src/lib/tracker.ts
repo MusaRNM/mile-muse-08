@@ -304,7 +304,7 @@ export const useTracker = create<TrackerState>((set, get) => {
           else get().continueInTraffic();
         });
       }
-      void startBackgroundTracking(handleNativePoint).then((ok) => {
+      void startBackgroundTracking(handleNativePoint, get().recording ? "record" : "detect").then((ok) => {
         if (ok) set({ watching: true, error: null, permission: "granted" });
         else set({ error: "Android background GPS did not start. Check location permissions." });
       });
@@ -378,6 +378,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         stationarySince: null,
       });
       persistCurrentTrip();
+      if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
       armAutoStopTimer();
     },
 
