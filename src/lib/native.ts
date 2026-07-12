@@ -193,7 +193,9 @@ export async function clearTripStopNotification(): Promise<void> {
   try {
     const { LocalNotifications } = await import("@capacitor/local-notifications");
     await LocalNotifications.cancel({ notifications: [{ id: TRIP_STOP_NOTIFICATION_ID }] });
-    await LocalNotifications.removeDeliveredNotifications({ notifications: [{ id: TRIP_STOP_NOTIFICATION_ID }] });
+    const delivered = await LocalNotifications.getDeliveredNotifications();
+    const notifications = delivered.notifications.filter((notification) => notification.id === TRIP_STOP_NOTIFICATION_ID);
+    if (notifications.length) await LocalNotifications.removeDeliveredNotifications({ notifications });
   } catch {
     /* ignore */
   }

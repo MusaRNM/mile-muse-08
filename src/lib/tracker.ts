@@ -161,10 +161,18 @@ export const useTracker = create<TrackerState>((set, get) => {
     return speed;
   }
 
-  function reset() {
+  function reset(keepWatching = true) {
     clearAutoStopTimer();
     void clearTripStopNotification();
     saveActiveTripSnapshot(null);
+    if (!keepWatching || !useSettings.getState().autoDetect) {
+      if (isNativeApp()) void stopBackgroundTracking();
+      const g = geo();
+      if (g && watchId !== null) g.clearWatch(watchId);
+      watchId = null;
+      lastWatchPoint = null;
+      set({ watching: false });
+    }
     set({
       recording: false,
       manual: false,
@@ -296,6 +304,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         if (ok) set({ watching: true, error: null, permission: "granted" });
         else set({ error: "Android background GPS did not start. Check location permissions." });
       });
+      if (get().recording) armAutoStopTimer();
       return;
     }
     const g = geo();
@@ -309,6 +318,7 @@ export const useTracker = create<TrackerState>((set, get) => {
       maximumAge: 2000,
       timeout: 20000,
     });
+    if (get().recording) armAutoStopTimer();
     set({ watching: true, error: null });
   }
 
@@ -344,8 +354,8 @@ export const useTracker = create<TrackerState>((set, get) => {
 
     enableWatch: () => startWatch(),
     disableWatch: () => {
+      reset(false);
       stopWatch();
-      reset();
     },
 
     startManual: () => {
