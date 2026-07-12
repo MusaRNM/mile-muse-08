@@ -207,7 +207,10 @@ function SettingsPage() {
         /* ignore */
       }
     })();
-    return () => cleanup?.();
+    return () => {
+      cleanup?.();
+      stopBatteryLivePoll();
+    };
   }, []);
   useEffect(() => {
     setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
