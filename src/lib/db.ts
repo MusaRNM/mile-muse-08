@@ -40,7 +40,10 @@ export function newId(): string {
 
 // ---- Trips ----
 export async function saveTrip(trip: Trip): Promise<void> {
-  await db().trips.put(trip);
+  // Re-validate on every write. Keeps a UI bug from persisting out-of-range
+  // values that would later fail backup restore round-trips.
+  const clean = tripSchema.parse(trip) as Trip;
+  await db().trips.put(clean);
 }
 
 export async function getTrips(): Promise<Trip[]> {
@@ -57,7 +60,8 @@ export async function deleteTrip(id: string): Promise<void> {
 
 // ---- Fuel ----
 export async function saveFuel(entry: FuelEntry): Promise<void> {
-  await db().fuel.put(entry);
+  const clean = fuelSchema.parse(entry) as FuelEntry;
+  await db().fuel.put(clean);
 }
 
 export async function getFuelEntries(): Promise<FuelEntry[]> {
@@ -67,6 +71,7 @@ export async function getFuelEntries(): Promise<FuelEntry[]> {
 export async function deleteFuel(id: string): Promise<void> {
   await db().fuel.delete(id);
 }
+
 
 // ---- Backup / Restore ----
 export interface BackupData {
