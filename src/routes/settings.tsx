@@ -8,7 +8,7 @@ import {
   requestIgnoreBatteryOptimizations,
   openAppDetailsSettings,
 } from "@/lib/native";
-import { CloudSyncCard } from "@/components/CloudSyncCard";
+import { DriveBackupCard } from "@/components/DriveBackupCard";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
