@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Clock, Globe } from "lucide-react";
-import { useSettings } from "@/lib/types";
+import { useSettings } from "@/lib/settings";
 
 /**
  * Live world clock in the header. Shows the current date/time in the
