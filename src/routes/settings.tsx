@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin } from "lucide-react";
+import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck } from "lucide-react";
+import {
+  isNativeApp,
+  isIgnoringBatteryOptimizations,
+  requestIgnoreBatteryOptimizations,
+  openAppDetailsSettings,
+} from "@/lib/native";
 import { CloudSyncCard } from "@/components/CloudSyncCard";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
