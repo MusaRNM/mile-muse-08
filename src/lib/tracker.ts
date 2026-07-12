@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { newId, saveTrip } from "./db";
+import { deleteTrip, newId, saveTrip } from "./db";
 import { formatSpeed, haversine, mphToMps, pathDistance, reverseGeocode, simplifyPath } from "./geo";
 import { useSettings } from "./settings";
 import type { TrackPoint, Trip } from "./types";
