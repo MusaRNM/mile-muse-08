@@ -431,18 +431,27 @@ function SettingsPage() {
                 icon={<BatteryCharging className="size-4" />}
                 title="Battery unrestricted"
                 ok={batteryOk}
+                live={batteryLive}
                 okText="Unrestricted — background GPS won't be paused."
                 badText="Battery optimization is enabled. Tap Fix to whitelist MileTrack."
                 pendingText="Checking…"
-                actionLabel={batteryOk ? "Recheck" : "Fix"}
+                actionLabel={batteryLive ? "Cancel" : batteryOk ? "Recheck" : "Fix"}
                 onAction={async () => {
+                  if (batteryLive) {
+                    stopBatteryLivePoll();
+                    return;
+                  }
+                  // Start the live indicator BEFORE leaving the app so the
+                  // status notification is already updating by the time the
+                  // user reaches the system battery-optimization screen.
+                  startBatteryLivePoll();
                   await requestIgnoreBatteryOptimizations();
                   setTimeout(async () => {
                     const ok = await isIgnoringBatteryOptimizations();
                     setBatteryOk(ok);
                     if (!ok) {
                       await openBatteryOptimizationSettings();
-                      toast.message("Find MileTrack and switch it off");
+                      toast.message("Find MileTrack — status updates live in the notification shade");
                     }
                   }, 1200);
                 }}
