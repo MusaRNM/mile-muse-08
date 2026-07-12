@@ -241,10 +241,14 @@ export const useTracker = create<TrackerState>((set, get) => {
     }
 
     // Recording: append point and update stats.
+    const moving = speed >= stopMps;
+    if (s.stopPromptOpen && !moving) {
+      updateTripState({ stationarySince: s.stationarySince ?? now });
+      return;
+    }
     const path = [...s.path, point];
     const distanceMeters = s.distanceMeters + (s.path.length ? haversine(s.path[s.path.length - 1], point) : 0);
     const maxSpeed = Math.max(s.maxSpeed, speed);
-    const moving = speed >= stopMps;
     const lastMoveTime = moving ? now : s.lastMoveTime;
     const stationarySince = moving ? null : s.stationarySince ?? now;
     updateTripState({

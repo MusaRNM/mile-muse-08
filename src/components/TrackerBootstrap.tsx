@@ -14,13 +14,14 @@ import { isNativeApp } from "@/lib/native";
  */
 export function TrackerBootstrap() {
   const enableWatch = useTracker((s) => s.enableWatch);
+  const recording = useTracker((s) => s.recording);
   const autoDetect = useSettings((s) => s.autoDetect);
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
-      if (autoDetect && isNativeApp()) {
+      if ((autoDetect || recording) && isNativeApp()) {
         useTracker.setState({ permission: "granted" });
         enableWatch();
         return;
@@ -55,7 +56,7 @@ export function TrackerBootstrap() {
           /* permissions API not available; ignore */
         }
       }
-      if (!cancelled && granted && autoDetect) {
+      if (!cancelled && granted && (autoDetect || recording)) {
         enableWatch();
       }
     }
@@ -64,7 +65,7 @@ export function TrackerBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [autoDetect, enableWatch]);
+  }, [autoDetect, enableWatch, recording]);
 
   return null;
 }

@@ -23,6 +23,7 @@ import { AppShell } from "@/components/AppShell";
 import { ThemeManager } from "@/lib/theme";
 import { TrackerBootstrap } from "@/components/TrackerBootstrap";
 import { ClassifyDialog } from "@/components/ClassifyDialog";
+import { TripStopDialog } from "@/components/TripStopDialog";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -155,6 +156,7 @@ function RootComponent() {
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </AppShell>
+      <TripStopDialog />
       <ClassifyDialog />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
