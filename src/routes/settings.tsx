@@ -293,9 +293,22 @@ function SettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
+                    // First trigger the native OS permission prompt directly
+                    // so the user can grant access without hunting through
+                    // Settings. Android will show the "Allow all the time"
+                    // choice on the second tap (background location).
+                    const granted = await requestNativeLocation();
+                    // Always open the app details page too — it's the only
+                    // way to switch to "Allow all the time" if it wasn't
+                    // offered in the prompt, and it's a no-op if the user
+                    // already granted everything.
                     void openAppDetailsSettings();
-                    toast.message("Tap Permissions → Location → Allow all the time");
+                    toast.message(
+                      granted
+                        ? "Tap Permissions → Location → Allow all the time"
+                        : "Tap Permissions → Location → Allow all the time",
+                    );
                   }}
                 >
                   Open
@@ -316,8 +329,20 @@ function SettingsPage() {
                   variant={batteryOk ? "outline" : "default"}
                   size="sm"
                   onClick={async () => {
+                    // Try the direct system prompt first.
                     await requestIgnoreBatteryOptimizations();
-                    setTimeout(refreshBattery, 800);
+                    // Re-check after the user has had a moment to respond.
+                    // If it's still not whitelisted, fall back to the app
+                    // details page where they can tap "App battery usage →
+                    // Unrestricted" — this works on every Android OEM.
+                    setTimeout(async () => {
+                      const ok = await isIgnoringBatteryOptimizations();
+                      setBatteryOk(ok);
+                      if (!ok) {
+                        void openAppDetailsSettings();
+                        toast.message("Tap App battery usage → Unrestricted");
+                      }
+                    }, 1200);
                   }}
                 >
                   {batteryOk ? "Recheck" : "Fix"}
