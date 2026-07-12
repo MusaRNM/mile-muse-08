@@ -58,9 +58,13 @@ interface TrackerState {
 let watchId: number | null = null;
 let lastWatchPoint: TrackPoint | null = null;
 let autoStopTimer: ReturnType<typeof setInterval> | null = null;
+let draftFlushTimer: ReturnType<typeof setInterval> | null = null;
+let lifecycleAttached = false;
 let nativeActionsRegistered = false;
 
 const ACTIVE_TRIP_KEY = "miletrack-active-trip-v2";
+const MAX_SNAPSHOT_POINTS = 4000; // cap localStorage payload (~5MB browser limit)
+const DRAFT_FLUSH_MS = 30_000;
 const MAX_REASONABLE_SPEED_MPS = mphToMps(130);
 
 type ActiveTripSnapshot = Pick<
