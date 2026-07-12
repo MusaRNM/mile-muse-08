@@ -47,16 +47,24 @@ const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => 
         "base-uri 'self'",
         "frame-ancestors 'self'",
         "form-action 'self'",
+        // Google Maps tiles + Nominatim tile-attribution + inline data URLs
+        // (receipt thumbnails render from validated data:image/* strings).
         "img-src 'self' data: blob: https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com https://*.google.com",
         "font-src 'self' data:",
         "style-src 'self' 'unsafe-inline'",
+        // Google Maps JS API needs its own origin; no eval.
         "script-src 'self' 'unsafe-inline' https://maps.googleapis.com",
-        "connect-src 'self' https://connector-gateway.lovable.dev https://*.supabase.co https://*.lovable.cloud https://nominatim.openstreetmap.org https://maps.googleapis.com",
+        // Outbound network is restricted to the exact endpoints the client
+        // uses: Google Maps for tiles/geocoding, Nominatim for opt-in
+        // reverse-geocoding fallback. Cloud sync was removed — Supabase and
+        // Lovable connector-gateway are not reachable from the browser.
+        "connect-src 'self' https://nominatim.openstreetmap.org https://maps.googleapis.com https://*.googleapis.com",
         "worker-src 'self' blob:",
         "child-src 'self' blob:",
         "object-src 'none'",
       ].join("; "),
     );
+
   }
   return res;
 });

@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider paths. Deliberately narrow — each entry maps a specific
+  subdirectory instead of the storage root, so a granted URI cannot be
+  traversed to expose the whole app data / external storage tree.
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
+    <!-- User-picked receipt images the OS shares back into the app. -->
+    <cache-path name="shared_receipts" path="shared/" />
+    <!-- Generated export files (PDF / CSV / XLS) staged for the OS share sheet. -->
+    <files-path name="exports" path="exports/" />
+    <!-- Images captured by the in-app camera intent. -->
+    <external-files-path name="captures" path="Pictures/" />
 </paths>

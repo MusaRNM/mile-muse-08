@@ -10,7 +10,10 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     captureInput: true,
-    webContentsDebuggingEnabled: true,
+    // Disabled for release builds — WebView debugging over ADB would let a
+    // physically-connected attacker inspect IndexedDB (trips, GPS history,
+    // receipts) and any in-memory state. Re-enable only for local debugging.
+    webContentsDebuggingEnabled: false,
     backgroundColor: "#0b0b0f",
     useLegacyBridge: true,
   },
