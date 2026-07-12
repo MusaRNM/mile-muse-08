@@ -124,7 +124,7 @@ function TripDetail() {
         </AlertDialog>
       </div>
 
-      <GoogleRouteMap path={trip.path} className="aspect-video w-full" />
+      <RouteMap path={trip.path} className="aspect-video w-full" />
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Calendar className="size-4" />
