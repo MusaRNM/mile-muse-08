@@ -90,6 +90,16 @@ function SettingsPage() {
     s.odometerBaselineAt,
   );
   const [odoInput, setOdoInput] = useState("");
+  const [native, setNative] = useState(false);
+  const [batteryOk, setBatteryOk] = useState<boolean | null>(null);
+  const refreshBattery = () => {
+    if (!isNativeApp()) return;
+    void isIgnoringBatteryOptimizations().then(setBatteryOk);
+  };
+  useEffect(() => {
+    setNative(isNativeApp());
+    refreshBattery();
+  }, []);
   useEffect(() => {
     setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
