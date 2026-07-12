@@ -314,6 +314,7 @@ export const useTracker = create<TrackerState>((set, get) => {
           manual: false,
           stopPromptOpen: false,
           startTime: now,
+          draftTripId: newId(),
           path: startingPath,
           distanceMeters: pathDistance(startingPath),
           maxSpeed: speed,
@@ -321,6 +322,7 @@ export const useTracker = create<TrackerState>((set, get) => {
           stationarySince: null,
         });
         armAutoStopTimer();
+        armDraftFlushTimer();
         if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
         void notify("Auto trip recording started", `MileTrack is tracking at ${formatSpeed(speed, settings.distanceUnit)}.`);
       }
