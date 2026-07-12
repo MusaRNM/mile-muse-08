@@ -486,6 +486,18 @@ function SettingsPage() {
           Terms of use
         </a>
       </p>
+
+      <p className="px-1 text-center text-xs text-muted-foreground">
+        <a
+          href="https://musarnm.github.io/mile-muse-08/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+        >
+          Legal documents on GitHub Pages
+          <ExternalLink className="size-3" />
+        </a>
+      </p>
     </div>
   );
 }
