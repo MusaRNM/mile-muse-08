@@ -88,7 +88,7 @@ export function getDriveState(): DriveState {
 function loadGisScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") return reject(new Error("SSR"));
-    if (window.google?.accounts?.oauth2) return resolve();
+    if (gis()) return resolve();
     const existing = document.getElementById(GIS_SCRIPT_ID) as HTMLScriptElement | null;
     if (existing) {
       existing.addEventListener("load", () => resolve());
@@ -111,16 +111,17 @@ async function getTokenClient(): Promise<GoogleTokenClient> {
   await loadGisScript();
   const clientId = getClientId();
   if (!clientId) throw new Error("Google Drive client ID is not configured.");
-  const oauth2 = window.google?.accounts?.oauth2;
+  const oauth2 = gis();
   if (!oauth2) throw new Error("Google Identity Services unavailable.");
-  tokenClient = oauth2.initTokenClient({
+  const client = oauth2.initTokenClient({
     client_id: clientId,
     scope: DRIVE_SCOPE,
     callback: () => {
       /* replaced per-request */
     },
   });
-  return tokenClient;
+  tokenClient = client;
+  return client;
 }
 
 async function requestAccessToken(interactive: boolean): Promise<string> {
