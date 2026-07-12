@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck } from "lucide-react";
+import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck, ExternalLink } from "lucide-react";
 import {
   isNativeApp,
   isIgnoringBatteryOptimizations,
@@ -484,6 +484,18 @@ function SettingsPage() {
           className="underline underline-offset-2 hover:text-foreground"
         >
           Terms of use
+        </a>
+      </p>
+
+      <p className="px-1 text-center text-xs text-muted-foreground">
+        <a
+          href="https://musarnm.github.io/mile-muse-08/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+        >
+          Legal documents on GitHub Pages
+          <ExternalLink className="size-3" />
         </a>
       </p>
     </div>
