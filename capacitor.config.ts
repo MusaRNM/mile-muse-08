@@ -23,7 +23,6 @@ const config: CapacitorConfig = {
       requestPermissionsOnStart: true,
     },
     Geolocation: {
-      // Android auto-requests location permissions on first watchPosition call.
       permissions: ["location", "coarseLocation"],
     },
   },
