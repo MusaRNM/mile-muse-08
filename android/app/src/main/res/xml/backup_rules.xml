@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Google Auto Backup would otherwise upload the app's private storage
+  (IndexedDB with every trip, GPS path and receipt) to the user's Google
+  Drive. Exclude everything — the app already offers an explicit, on-device
+  Export/Import in Settings, which keeps sensitive location history under
+  user control instead of a background cloud copy.
+-->
+<full-backup-content>
+    <exclude domain="root" />
+    <exclude domain="file" />
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+    <exclude domain="external" />
+</full-backup-content>
