@@ -242,11 +242,18 @@ export async function openNativeLocationSettings(): Promise<void> {
   }
 }
 
+export type LocationPermissionState = {
+  fine: boolean;
+  coarse: boolean;
+  background: boolean;
+};
+
 type AppSettingsPlugin = {
   isIgnoringBatteryOptimizations: () => Promise<{ ignoring: boolean }>;
   requestIgnoreBatteryOptimizations: () => Promise<void>;
   openAppDetailsSettings: () => Promise<void>;
   openBatteryOptimizationSettings?: () => Promise<void>;
+  checkLocationPermissions?: () => Promise<LocationPermissionState>;
 };
 
 let appSettingsPlugin: AppSettingsPlugin | null = null;
@@ -320,6 +327,44 @@ export async function openAppDetailsSettings(): Promise<void> {
   } catch {
     await openNativeLocationSettings();
   }
+}
+
+/**
+ * Returns granular location-permission state (fine / coarse / background).
+ * Falls back to the Capacitor Geolocation plugin when the native plugin isn't
+ * available, mapping foreground = background pre-Android 10 semantics.
+ */
+export async function checkLocationPermissionState(): Promise<LocationPermissionState> {
+  const p = await getAppSettings();
+  if (p?.checkLocationPermissions) {
+    try {
+      const res = await p.checkLocationPermissions();
+      return { fine: !!res.fine, coarse: !!res.coarse, background: !!res.background };
+    } catch {
+      /* fall through */
+    }
+  }
+  if (isNativeApp()) {
+    try {
+      const { Geolocation } = await import("@capacitor/geolocation");
+      const status = await Geolocation.checkPermissions();
+      const fg = status.location === "granted" || status.coarseLocation === "granted";
+      return { fine: status.location === "granted", coarse: status.coarseLocation === "granted", background: fg };
+    } catch {
+      return { fine: false, coarse: false, background: false };
+    }
+  }
+  // Web fallback.
+  try {
+    if (typeof navigator !== "undefined" && "permissions" in navigator) {
+      const s = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+      const granted = s.state === "granted";
+      return { fine: granted, coarse: granted, background: granted };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { fine: false, coarse: false, background: false };
 }
 
 export async function ensureNotificationPermission(): Promise<boolean> {

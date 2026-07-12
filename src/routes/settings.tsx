@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck, ExternalLink } from "lucide-react";
+import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck, ExternalLink, CheckCircle2, XCircle, Satellite } from "lucide-react";
 import {
   isNativeApp,
   isIgnoringBatteryOptimizations,
@@ -9,6 +9,8 @@ import {
   openAppDetailsSettings,
   openBatteryOptimizationSettings,
   requestNativeLocation,
+  checkLocationPermissionState,
+  type LocationPermissionState,
 } from "@/lib/native";
 
 import { Switch } from "@/components/ui/switch";
@@ -78,6 +80,48 @@ function Row({
   );
 }
 
+function StatusRow({
+  icon,
+  title,
+  ok,
+  okText,
+  badText,
+  pendingText,
+  actionLabel,
+  onAction,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  ok: boolean | null;
+  okText: string;
+  badText: string;
+  pendingText: string;
+  actionLabel: string;
+  onAction: () => void | Promise<void>;
+}) {
+  const desc = ok === null ? pendingText : ok ? okText : badText;
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 text-muted-foreground">{icon}</span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">{title}</p>
+            {ok === true && <CheckCircle2 className="size-4 text-emerald-500" aria-label="OK" />}
+            {ok === false && <XCircle className="size-4 text-destructive" aria-label="Needs attention" />}
+          </div>
+          <p className="text-xs text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+      <div className="shrink-0">
+        <Button variant={ok ? "outline" : "default"} size="sm" onClick={() => void onAction()}>
+          {actionLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage() {
   const s = useSettings();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -94,13 +138,34 @@ function SettingsPage() {
   const [odoInput, setOdoInput] = useState("");
   const [native, setNative] = useState(false);
   const [batteryOk, setBatteryOk] = useState<boolean | null>(null);
+  const [locPerm, setLocPerm] = useState<LocationPermissionState | null>(null);
   const refreshBattery = () => {
     if (!isNativeApp()) return;
     void isIgnoringBatteryOptimizations().then(setBatteryOk);
   };
+  const refreshLocation = () => {
+    void checkLocationPermissionState().then(setLocPerm);
+  };
+  const refreshStatus = () => {
+    refreshBattery();
+    refreshLocation();
+  };
   useEffect(() => {
     setNative(isNativeApp());
-    refreshBattery();
+    refreshStatus();
+    // Re-check whenever the user returns to the app after visiting Settings.
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      if (!isNativeApp()) return;
+      try {
+        const { App } = await import("@capacitor/app");
+        const h = await App.addListener("resume", () => refreshStatus());
+        cleanup = () => void h.remove();
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => cleanup?.();
   }, []);
   useEffect(() => {
     setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
@@ -278,6 +343,69 @@ function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {native && (
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Status
+          </h2>
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="divide-y">
+              <StatusRow
+                icon={<Satellite className="size-4" />}
+                title="GPS access"
+                ok={locPerm ? locPerm.fine || locPerm.coarse : null}
+                okText="Granted — MileTrack can read your location."
+                badText="Not granted. Tap Fix to allow location access."
+                pendingText="Checking…"
+                actionLabel={locPerm && (locPerm.fine || locPerm.coarse) ? "Recheck" : "Fix"}
+                onAction={async () => {
+                  const granted = await requestNativeLocation();
+                  if (!granted) {
+                    await openAppDetailsSettings();
+                    toast.message("Tap Permissions → Location → Allow");
+                  }
+                  setTimeout(refreshLocation, 800);
+                }}
+              />
+              <StatusRow
+                icon={<MapPin className="size-4" />}
+                title="Background location"
+                ok={locPerm ? locPerm.background : null}
+                okText="Allow all the time — trips keep recording in the background."
+                badText='Set to "Allow all the time" so trips keep recording with the screen off.'
+                pendingText="Checking…"
+                actionLabel={locPerm?.background ? "Recheck" : "Fix"}
+                onAction={async () => {
+                  await requestNativeLocation();
+                  await openAppDetailsSettings();
+                  toast.message("Tap Permissions → Location → Allow all the time");
+                }}
+              />
+              <StatusRow
+                icon={<BatteryCharging className="size-4" />}
+                title="Battery unrestricted"
+                ok={batteryOk}
+                okText="Unrestricted — background GPS won't be paused."
+                badText="Battery optimization is enabled. Tap Fix to whitelist MileTrack."
+                pendingText="Checking…"
+                actionLabel={batteryOk ? "Recheck" : "Fix"}
+                onAction={async () => {
+                  await requestIgnoreBatteryOptimizations();
+                  setTimeout(async () => {
+                    const ok = await isIgnoringBatteryOptimizations();
+                    setBatteryOk(ok);
+                    if (!ok) {
+                      await openBatteryOptimizationSettings();
+                      toast.message("Find MileTrack and switch it off");
+                    }
+                  }, 1200);
+                }}
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {native && (
         <section>
