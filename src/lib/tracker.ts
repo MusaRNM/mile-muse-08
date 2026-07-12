@@ -172,6 +172,8 @@ export const useTracker = create<TrackerState>((set, get) => {
       watchId = null;
       lastWatchPoint = null;
       set({ watching: false });
+    } else if (isNativeApp()) {
+      void startBackgroundTracking(handleNativePoint, "detect");
     }
     set({
       recording: false,
@@ -235,6 +237,7 @@ export const useTracker = create<TrackerState>((set, get) => {
           stationarySince: null,
         });
         armAutoStopTimer();
+        if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
         void notify("Auto trip recording started", `MileTrack is tracking at ${formatSpeed(speed, settings.distanceUnit)}.`);
       }
       return;
