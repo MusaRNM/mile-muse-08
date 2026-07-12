@@ -469,7 +469,7 @@ function SettingsPage() {
       <p className="px-1 text-center text-xs text-muted-foreground">
         MileTrack stores everything on your device. No accounts, no cloud sync, no ads, no analytics.{" "}
         <a
-          href="/privacy-policy.html"
+          href="https://musarnm.github.io/mile-muse-08/privacy-policy.html"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:text-foreground"
@@ -478,7 +478,7 @@ function SettingsPage() {
         </a>
         {" · "}
         <a
-          href="/terms.html"
+          href="https://musarnm.github.io/mile-muse-08/terms.html"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:text-foreground"
