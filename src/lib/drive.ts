@@ -192,7 +192,7 @@ export async function disconnectDrive(): Promise<void> {
   try {
     if (accessToken) {
       await new Promise<void>((resolve) => {
-        window.google?.accounts?.oauth2?.revoke(accessToken!, () => resolve());
+        gis()?.revoke(accessToken!, () => resolve());
       });
     }
   } catch {
