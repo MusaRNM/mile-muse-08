@@ -2,7 +2,7 @@
 
 **Last updated:** July 12, 2026
 **App:** MileTrack (`app.lovable.miletrack`)
-**Contact:** _Replace with your support email before publishing_
+**Contact:** MileTrack.Help@hotmail.com
 
 MileTrack is a personal mileage tracker. This policy describes exactly what
 data the app handles, where it lives, and whether any of it leaves your
