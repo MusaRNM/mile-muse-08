@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin } from "lucide-react";
+import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck } from "lucide-react";
+import {
+  isNativeApp,
+  isIgnoringBatteryOptimizations,
+  requestIgnoreBatteryOptimizations,
+  openAppDetailsSettings,
+} from "@/lib/native";
 import { CloudSyncCard } from "@/components/CloudSyncCard";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -84,6 +90,16 @@ function SettingsPage() {
     s.odometerBaselineAt,
   );
   const [odoInput, setOdoInput] = useState("");
+  const [native, setNative] = useState(false);
+  const [batteryOk, setBatteryOk] = useState<boolean | null>(null);
+  const refreshBattery = () => {
+    if (!isNativeApp()) return;
+    void isIgnoringBatteryOptimizations().then(setBatteryOk);
+  };
+  useEffect(() => {
+    setNative(isNativeApp());
+    refreshBattery();
+  }, []);
   useEffect(() => {
     setOdoInput(metersToUnit(currentMeters, s.distanceUnit).toFixed(1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,6 +276,57 @@ function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {native && (
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Android permissions
+          </h2>
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="divide-y">
+              <Row
+                icon={<ShieldCheck className="size-4" />}
+                title="Location access"
+                desc="Set to Allow all the time so trips keep recording with the screen off or another app open."
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    void openAppDetailsSettings();
+                    toast.message("Tap Permissions → Location → Allow all the time");
+                  }}
+                >
+                  Open
+                </Button>
+              </Row>
+              <Row
+                icon={<BatteryCharging className="size-4" />}
+                title="Battery optimization"
+                desc={
+                  batteryOk === null
+                    ? "Disable so Android doesn't pause GPS in the background."
+                    : batteryOk
+                      ? "Disabled for MileTrack — background GPS won't be paused."
+                      : "Currently enabled. Tap Fix to whitelist MileTrack."
+                }
+              >
+                <Button
+                  variant={batteryOk ? "outline" : "default"}
+                  size="sm"
+                  onClick={async () => {
+                    await requestIgnoreBatteryOptimizations();
+                    setTimeout(refreshBattery, 800);
+                  }}
+                >
+                  {batteryOk ? "Recheck" : "Fix"}
+                </Button>
+              </Row>
+            </div>
+          </div>
+        </section>
+      )}
+
 
       <section>
         <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

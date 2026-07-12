@@ -239,6 +239,62 @@ export async function openNativeLocationSettings(): Promise<void> {
   }
 }
 
+type AppSettingsPlugin = {
+  isIgnoringBatteryOptimizations: () => Promise<{ ignoring: boolean }>;
+  requestIgnoreBatteryOptimizations: () => Promise<void>;
+  openAppDetailsSettings: () => Promise<void>;
+};
+
+let appSettingsPlugin: AppSettingsPlugin | null = null;
+async function getAppSettings(): Promise<AppSettingsPlugin | null> {
+  if (!isNativeApp()) return null;
+  if (appSettingsPlugin) return appSettingsPlugin;
+  try {
+    const { registerPlugin } = await import("@capacitor/core");
+    appSettingsPlugin = registerPlugin<AppSettingsPlugin>("AppSettings");
+    return appSettingsPlugin;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns true when the OS reports the app is exempt from battery optimizations. */
+export async function isIgnoringBatteryOptimizations(): Promise<boolean> {
+  const p = await getAppSettings();
+  if (!p) return false;
+  try {
+    const res = await p.isIgnoringBatteryOptimizations();
+    return !!res?.ignoring;
+  } catch {
+    return false;
+  }
+}
+
+/** Opens the Android system prompt to whitelist the app from battery optimizations. */
+export async function requestIgnoreBatteryOptimizations(): Promise<void> {
+  const p = await getAppSettings();
+  if (!p) return;
+  try {
+    await p.requestIgnoreBatteryOptimizations();
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Opens the Android app-info screen so the user can set Location → Allow all the time. */
+export async function openAppDetailsSettings(): Promise<void> {
+  const p = await getAppSettings();
+  if (!p) {
+    await openNativeLocationSettings();
+    return;
+  }
+  try {
+    await p.openAppDetailsSettings();
+  } catch {
+    await openNativeLocationSettings();
+  }
+}
+
 export async function ensureNotificationPermission(): Promise<boolean> {
   if (isNativeApp()) {
     try {
