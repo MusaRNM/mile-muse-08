@@ -467,7 +467,15 @@ function SettingsPage() {
       </section>
 
       <p className="px-1 text-center text-xs text-muted-foreground">
-        MileTrack stores everything on your device. Cloud sync is optional and end-to-end encrypted.
+        MileTrack stores everything on your device. No accounts, no cloud sync, no ads, no analytics.{" "}
+        <a
+          href="/privacy-policy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          Privacy policy
+        </a>
       </p>
     </div>
   );
