@@ -475,6 +475,64 @@ function SettingsPage() {
               />
             </div>
           </div>
+          {(() => {
+            const hints: { key: string; title: string; steps: string[] }[] = [];
+            if (locPerm && !locPerm.fine && !locPerm.coarse) {
+              hints.push({
+                key: "gps",
+                title: "GPS access is still off",
+                steps: [
+                  "Open Android Settings → Apps → MileTrack → Permissions → Location.",
+                  'Choose "Allow only while using the app" or "Allow all the time".',
+                  "If the option is greyed out, enable Location services from the quick-settings tile first.",
+                ],
+              });
+            }
+            if (locPerm && (locPerm.fine || locPerm.coarse) && !locPerm.background) {
+              hints.push({
+                key: "bg",
+                title: 'Background location is not set to "Allow all the time"',
+                steps: [
+                  "Open Android Settings → Apps → MileTrack → Permissions → Location.",
+                  'Tap "Allow all the time". Android may hide this option behind "See all Location apps".',
+                  "On Android 11+ you'll be sent back to the system prompt — pick All the time there.",
+                ],
+              });
+            }
+            if (batteryOk === false) {
+              hints.push({
+                key: "bat",
+                title: "Battery is still optimized",
+                steps: [
+                  'Open Settings → Apps → MileTrack → App battery usage and pick "Unrestricted".',
+                  'Samsung: Settings → Battery → Background usage limits → remove MileTrack from "Sleeping / Deep sleeping apps".',
+                  'Xiaomi / Redmi: Security → Battery → App battery saver → MileTrack → "No restrictions", and Autostart → enable.',
+                  'OnePlus / Oppo / Realme: Settings → Battery → Battery optimization → MileTrack → "Don\'t optimize"; also Advanced → Allow background activity.',
+                ],
+              });
+            }
+            if (hints.length === 0) return null;
+            return (
+              <div className="mt-3 space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                  Troubleshooting
+                </p>
+                {hints.map((h) => (
+                  <div key={h.key}>
+                    <p className="text-sm font-medium">{h.title}</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                      {h.steps.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <p className="text-[11px] text-muted-foreground">
+                  Menu names vary by manufacturer and Android version — use the closest match.
+                </p>
+              </div>
+            );
+          })()}
         </section>
       )}
 
