@@ -25,8 +25,11 @@ export function WorldClock() {
     return () => clearInterval(id);
   }, []);
 
-  // Try to enrich with a city name if geolocation is available. Silent-fail.
+  // Try to enrich with a city name if geolocation is available AND the user
+  // opted into reverse geocoding. Silent-fail. Without opt-in, no coordinates
+  // ever leave the device from this component.
   useEffect(() => {
+    if (!reverseGeocodeEnabled) return;
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) return;
     let cancelled = false;
     navigator.geolocation.getCurrentPosition(
