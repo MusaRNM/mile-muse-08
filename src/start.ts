@@ -20,10 +20,9 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 
 /**
  * Baseline security headers for every server-rendered response.
- * CSP is intentionally permissive on script (Vite + Google Maps loader need
- * inline) but restricts connect/img/frame — the primary goal is preventing
- * exfiltration and clickjacking, and scoping Permissions-Policy so geolocation
- * cannot be silently invoked by cross-origin iframes.
+ * The app has no third-party map/script dependencies; CSP is tight to
+ * prevent exfiltration and clickjacking and to scope Permissions-Policy so
+ * geolocation cannot be silently invoked by cross-origin iframes.
  */
 const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => {
   const res = await next();
@@ -47,18 +46,17 @@ const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => 
         "base-uri 'self'",
         "frame-ancestors 'self'",
         "form-action 'self'",
-        // Google Maps tiles + Nominatim tile-attribution + inline data URLs
-        // (receipt thumbnails render from validated data:image/* strings).
-        "img-src 'self' data: blob: https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com https://*.google.com",
+        // Receipt thumbnails render from validated data:image/* strings.
+        "img-src 'self' data: blob:",
         "font-src 'self' data:",
         "style-src 'self' 'unsafe-inline'",
-        // Google Maps JS API needs its own origin; no eval.
-        "script-src 'self' 'unsafe-inline' https://maps.googleapis.com",
-        // Outbound network is restricted to the exact endpoints the client
-        // uses: Google Maps for tiles/geocoding, Nominatim for opt-in
-        // reverse-geocoding fallback. Cloud sync was removed — Supabase and
-        // Lovable connector-gateway are not reachable from the browser.
-        "connect-src 'self' https://nominatim.openstreetmap.org https://maps.googleapis.com https://*.googleapis.com",
+        // No third-party scripts — the app runs entirely from its own origin.
+        "script-src 'self' 'unsafe-inline'",
+        // Outbound network is restricted to the single free endpoint the
+        // client can call: OpenStreetMap Nominatim, and only if the user
+        // opts in to reverse-geocoding in Settings. No Google APIs, no
+        // paid services, no analytics endpoints.
+        "connect-src 'self' https://nominatim.openstreetmap.org",
         "worker-src 'self' blob:",
         "child-src 'self' blob:",
         "object-src 'none'",

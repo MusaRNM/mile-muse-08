@@ -78,23 +78,13 @@ export function pathDistance(path: TrackPoint[]): number {
 /**
  * Reverse geocode a coordinate into a human address.
  *
- * PRIVACY: sends the coordinates to a third party. Caller must gate this
- * behind an explicit user opt-in. When the Google Maps connector is linked
- * the server-side gateway path is used; otherwise falls back to the free
- * OpenStreetMap Nominatim endpoint. Throttled to <=1 req/s per Nominatim ToS.
+ * PRIVACY / COST: sends the coordinates to OpenStreetMap Nominatim, a free
+ * community geocoding service (no API key, no billing). The app never calls
+ * Google Maps, Google Geocoding, or any paid service. Caller must gate this
+ * behind an explicit user opt-in. Throttled to <=1 req/s per Nominatim ToS.
  */
 let lastNominatimAt = 0;
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
-  // Try the Google Maps connector server function first when available.
-  try {
-    const mod = await import("./maps.functions").catch(() => null);
-    if (mod && typeof mod.reverseGeocodeGoogle === "function") {
-      const res = await mod.reverseGeocodeGoogle({ data: { lat, lng } });
-      if (res?.address) return res.address;
-    }
-  } catch {
-    /* fall through to Nominatim */
-  }
   try {
     const wait = Math.max(0, 1100 - (Date.now() - lastNominatimAt));
     if (wait) await new Promise((r) => setTimeout(r, wait));

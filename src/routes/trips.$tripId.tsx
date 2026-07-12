@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { GoogleRouteMap } from "@/components/GoogleRouteMap";
+import { RouteMap } from "@/components/RouteMap";
 import { getTrip, saveTrip, deleteTrip } from "@/lib/db";
 import { useSettings } from "@/lib/settings";
 import { formatDistance, formatDuration, formatSpeed } from "@/lib/geo";
@@ -124,7 +124,7 @@ function TripDetail() {
         </AlertDialog>
       </div>
 
-      <GoogleRouteMap path={trip.path} className="aspect-video w-full" />
+      <RouteMap path={trip.path} className="aspect-video w-full" />
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Calendar className="size-4" />
