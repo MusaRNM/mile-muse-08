@@ -44,7 +44,11 @@ interface GoogleAccountsOAuth2 {
 }
 declare global {
   interface Window {
-    google?: { accounts?: { oauth2?: GoogleAccountsOAuth2 } };
+    google?: {
+      accounts?: { oauth2?: GoogleAccountsOAuth2 };
+      // Google Maps also augments window.google with its own `maps` field;
+      // keep the accounts field optional so both declarations merge cleanly.
+    };
   }
 }
 
