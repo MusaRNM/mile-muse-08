@@ -110,7 +110,10 @@ export async function startBackgroundTracking(onPos: BgLocationHandler, mode: Tr
         backgroundTitle: recording ? "Recording mileage" : "Mileage auto-detect active",
         requestPermissions: true,
         stale: false,
-        distanceFilter: recording ? 0 : 5,
+        // Battery: don't stream every fix. 10m while recording keeps a tight
+        // route without waking the radio on every sample; 25m in ambient
+        // auto-detect is enough to notice motion without meaningful drain.
+        distanceFilter: recording ? 10 : 25,
       },
       (location, error) => {
         if (error) {
