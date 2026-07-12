@@ -316,6 +316,51 @@ export async function openBatteryOptimizationSettings(): Promise<void> {
   }
 }
 
+/**
+ * Shows (or updates) a persistent notification that reflects the current
+ * battery-optimization whitelist state. Meant to sit in the notification
+ * shade while the user is on the system battery-settings screen so they can
+ * see the moment the toggle takes effect — pull down the shade or glance at
+ * the status bar without switching back to the app.
+ */
+export async function showBatteryStatusNotification(ignoring: boolean): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    await ensureNotificationPermission();
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: BATTERY_STATUS_NOTIFICATION_ID,
+          title: ignoring ? "✅ MileTrack: Unrestricted" : "⚠️ MileTrack: Optimized",
+          body: ignoring
+            ? "Background GPS won't be paused. You can return to the app."
+            : "Battery optimization is still on. Toggle MileTrack off to whitelist it.",
+          ongoing: true,
+          autoCancel: false,
+          extra: { kind: "battery-status" },
+          schedule: { at: new Date(Date.now() + 50), allowWhileIdle: true },
+        },
+      ],
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function clearBatteryStatusNotification(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    await LocalNotifications.cancel({ notifications: [{ id: BATTERY_STATUS_NOTIFICATION_ID }] });
+    const delivered = await LocalNotifications.getDeliveredNotifications();
+    const match = delivered.notifications.filter((n) => n.id === BATTERY_STATUS_NOTIFICATION_ID);
+    if (match.length) await LocalNotifications.removeDeliveredNotifications({ notifications: match });
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Opens the Android app-info screen so the user can set Location → Allow all the time. */
 export async function openAppDetailsSettings(): Promise<void> {
   const p = await getAppSettings();
