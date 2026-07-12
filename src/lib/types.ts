@@ -99,8 +99,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   promptOnEnd: true,
   irsRatePerMile: 0.7, // 2025 IRS standard business mileage rate
   theme: "system",
-  reverseGeocodeEnabled: true,
+  // PRIVACY: off by default. When enabled, trip start/end coordinates are
+  // sent to a third-party geocoder (Nominatim, or Google if the connector is
+  // linked) to resolve human-readable addresses.
+  reverseGeocodeEnabled: false,
   cloudSyncEnabled: false,
+
   odometerBaselineMeters: 0,
   odometerBaselineAt: 0,
   odometerLastPromptAt: 0,
