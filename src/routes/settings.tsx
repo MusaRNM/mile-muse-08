@@ -346,7 +346,7 @@ function SettingsPage() {
         </div>
       </section>
 
-      <CloudSyncCard />
+      <DriveBackupCard />
 
       <section>
         <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
