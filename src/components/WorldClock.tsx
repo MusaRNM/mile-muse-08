@@ -60,7 +60,7 @@ export function WorldClock() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reverseGeocodeEnabled]);
 
   const time = now
     ? new Intl.DateTimeFormat(undefined, {
