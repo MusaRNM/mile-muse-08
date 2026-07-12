@@ -8,7 +8,7 @@ import {
   requestIgnoreBatteryOptimizations,
   openAppDetailsSettings,
 } from "@/lib/native";
-import { DriveBackupCard } from "@/components/DriveBackupCard";
+
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
@@ -346,7 +346,7 @@ function SettingsPage() {
         </div>
       </section>
 
-      <DriveBackupCard />
+      
 
       <section>
         <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
