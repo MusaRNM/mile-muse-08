@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { newId, saveTrip } from "./db";
+import { deleteTrip, newId, saveTrip } from "./db";
 import { formatSpeed, haversine, mphToMps, pathDistance, reverseGeocode, simplifyPath } from "./geo";
 import { useSettings } from "./settings";
 import type { TrackPoint, Trip } from "./types";
@@ -41,6 +41,13 @@ interface TrackerState {
   locationSampleCount: number;
   stationarySince: number | null;
 
+  /**
+   * Id assigned at trip-start. Used to durably upsert the in-progress trip
+   * into IndexedDB so a phone reboot or process kill mid-trip does not lose
+   * the recording. Same id is reused when the trip is finalized.
+   */
+  draftTripId: string | null;
+
   /** Trip id waiting for the user to classify (business/personal). */
   pendingClassifyId: string | null;
 
@@ -58,9 +65,13 @@ interface TrackerState {
 let watchId: number | null = null;
 let lastWatchPoint: TrackPoint | null = null;
 let autoStopTimer: ReturnType<typeof setInterval> | null = null;
+let draftFlushTimer: ReturnType<typeof setInterval> | null = null;
+let lifecycleAttached = false;
 let nativeActionsRegistered = false;
 
 const ACTIVE_TRIP_KEY = "miletrack-active-trip-v2";
+const MAX_SNAPSHOT_POINTS = 4000; // cap localStorage payload (~5MB browser limit)
+const DRAFT_FLUSH_MS = 30_000;
 const MAX_REASONABLE_SPEED_MPS = mphToMps(130);
 
 type ActiveTripSnapshot = Pick<
@@ -74,6 +85,7 @@ type ActiveTripSnapshot = Pick<
   | "maxSpeed"
   | "lastMoveTime"
   | "stationarySince"
+  | "draftTripId"
 >;
 
 function geo(): Geolocation | null {
@@ -124,17 +136,87 @@ export const useTracker = create<TrackerState>((set, get) => {
 
   function persistCurrentTrip() {
     const state = get();
+    // Bound the localStorage payload for very long trips. IndexedDB (via
+    // flushDraftTrip) keeps the full-fidelity path — this is a hot-recovery
+    // hint only.
+    const path = state.path.length > MAX_SNAPSHOT_POINTS
+      ? state.path.slice(-MAX_SNAPSHOT_POINTS)
+      : state.path;
     saveActiveTripSnapshot({
       recording: state.recording,
       manual: state.manual,
-      path: state.path,
+      path,
       startTime: state.startTime,
       distanceMeters: state.distanceMeters,
       currentSpeed: state.currentSpeed,
       maxSpeed: state.maxSpeed,
       lastMoveTime: state.lastMoveTime,
       stationarySince: state.stationarySince,
+      draftTripId: state.draftTripId,
     });
+  }
+
+  /**
+   * Upsert the in-progress trip into IndexedDB so a phone reboot or a mid-trip
+   * process kill leaves a recoverable record instead of silently discarding
+   * everything. Uses the pre-assigned draftTripId so finalization overwrites
+   * the same row.
+   */
+  async function flushDraftTrip() {
+    const s = get();
+    if (!s.recording || !s.startTime || !s.draftTripId || s.path.length === 0) return;
+    const now = Date.now();
+    const durationSec = Math.max(1, Math.round((now - s.startTime) / 1000));
+    const trip: Trip = {
+      id: s.draftTripId,
+      startTime: s.startTime,
+      endTime: now,
+      durationSec,
+      distanceMeters: s.distanceMeters,
+      avgSpeed: s.distanceMeters / durationSec,
+      maxSpeed: s.maxSpeed,
+      category: "unclassified",
+      path: simplifyPath(s.path),
+      source: s.manual ? "manual" : "auto",
+      createdAt: s.startTime,
+      updatedAt: now,
+    };
+    try {
+      await saveTrip(trip);
+    } catch {
+      /* ignore — best-effort durability */
+    }
+  }
+
+  function armDraftFlushTimer() {
+    if (draftFlushTimer) return;
+    draftFlushTimer = setInterval(() => void flushDraftTrip(), DRAFT_FLUSH_MS);
+  }
+
+  function clearDraftFlushTimer() {
+    if (draftFlushTimer) clearInterval(draftFlushTimer);
+    draftFlushTimer = null;
+  }
+
+  function attachLifecycle() {
+    if (lifecycleAttached || typeof window === "undefined") return;
+    lifecycleAttached = true;
+    // Flush on tab/app hide — covers browser tab close and Capacitor pause
+    // (Capacitor forwards pause as visibilitychange on the WebView).
+    const onHide = () => {
+      if (document.visibilityState === "hidden") void flushDraftTrip();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", () => void flushDraftTrip());
+    // Best-effort native app pause listener.
+    if (isNativeApp()) {
+      void import("@capacitor/app").then(({ App }) => {
+        void App.addListener("pause", () => void flushDraftTrip());
+        void App.addListener("appStateChange", (s: { isActive: boolean }) => {
+          if (!s.isActive) void flushDraftTrip();
+        });
+      }).catch(() => {/* ignore */});
+    }
   }
 
   function updateTripState(patch: Partial<TrackerState>) {
@@ -163,6 +245,7 @@ export const useTracker = create<TrackerState>((set, get) => {
 
   function reset(keepWatching = true) {
     clearAutoStopTimer();
+    clearDraftFlushTimer();
     void clearTripStopNotification();
     saveActiveTripSnapshot(null);
     if (!keepWatching || !useSettings.getState().autoDetect) {
@@ -186,6 +269,7 @@ export const useTracker = create<TrackerState>((set, get) => {
       maxSpeed: 0,
       lastMoveTime: null,
       stationarySince: null,
+      draftTripId: null,
     });
   }
 
@@ -230,6 +314,7 @@ export const useTracker = create<TrackerState>((set, get) => {
           manual: false,
           stopPromptOpen: false,
           startTime: now,
+          draftTripId: newId(),
           path: startingPath,
           distanceMeters: pathDistance(startingPath),
           maxSpeed: speed,
@@ -237,6 +322,7 @@ export const useTracker = create<TrackerState>((set, get) => {
           stationarySince: null,
         });
         armAutoStopTimer();
+        armDraftFlushTimer();
         if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
         void notify("Auto trip recording started", `MileTrack is tracking at ${formatSpeed(speed, settings.distanceUnit)}.`);
       }
@@ -339,6 +425,7 @@ export const useTracker = create<TrackerState>((set, get) => {
   }
 
   const recovered = loadActiveTripSnapshot();
+  attachLifecycle();
 
   return {
     watching: false,
@@ -357,9 +444,18 @@ export const useTracker = create<TrackerState>((set, get) => {
     lastAccuracyMeters: null,
     locationSampleCount: 0,
     stationarySince: recovered?.stationarySince ?? null,
+    draftTripId: recovered?.draftTripId ?? null,
     pendingClassifyId: null,
 
-    enableWatch: () => startWatch(),
+    enableWatch: () => {
+      startWatch();
+      // If we recovered a recording session across a cold start / reboot,
+      // re-arm the durability timers so the next flush actually happens.
+      if (get().recording) {
+        armAutoStopTimer();
+        armDraftFlushTimer();
+      }
+    },
     disableWatch: () => {
       reset(false);
       stopWatch();
@@ -373,6 +469,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         manual: true,
         stopPromptOpen: false,
         startTime: now,
+        draftTripId: newId(),
         path: [],
         distanceMeters: 0,
         maxSpeed: 0,
@@ -383,6 +480,7 @@ export const useTracker = create<TrackerState>((set, get) => {
       persistCurrentTrip();
       if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
       armAutoStopTimer();
+      armDraftFlushTimer();
     },
 
     stopAndSave: async () => {
@@ -398,7 +496,9 @@ export const useTracker = create<TrackerState>((set, get) => {
       const durationSec = Math.max(1, Math.round((endTime - s.startTime) / 1000));
       const avgSpeed = distanceMeters / durationSec;
 
-      const id = newId();
+      // Reuse the draft id assigned at trip-start so we overwrite any partial
+      // row that was flushed during recording (crash/reboot durability).
+      const id = s.draftTripId ?? newId();
       const trip: Trip = {
         id,
         startTime: s.startTime,
@@ -410,7 +510,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         category: "unclassified",
         path,
         source: s.manual ? "manual" : "auto",
-        createdAt: endTime,
+        createdAt: s.startTime,
         updatedAt: endTime,
       };
 
@@ -448,7 +548,13 @@ export const useTracker = create<TrackerState>((set, get) => {
       armAutoStopTimer();
     },
 
-    discard: () => reset(),
+    discard: () => {
+      // If a draft row was flushed to IDB, remove it so a discarded trip
+      // doesn't reappear as a partial record.
+      const draftId = get().draftTripId;
+      if (draftId) void deleteTrip(draftId).catch(() => {/* ignore */});
+      reset();
+    },
     clearPending: () => set({ pendingClassifyId: null }),
     openLocationSettings: () => openNativeLocationSettings(),
 

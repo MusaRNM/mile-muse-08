@@ -17,8 +17,11 @@
     <!-- Trip-end notifications. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Keep the CPU awake for the duration of an active trip only. -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- WAKE_LOCK is not requested directly; the background-geolocation
+         foreground service holds its own partial wake lock while a watcher
+         is active. Removed to keep the permission list minimal for Play
+         Store review. -->
+
 
     <!--
       Requested only from Settings when the user opts in. Google Play requires
