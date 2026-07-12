@@ -136,17 +136,87 @@ export const useTracker = create<TrackerState>((set, get) => {
 
   function persistCurrentTrip() {
     const state = get();
+    // Bound the localStorage payload for very long trips. IndexedDB (via
+    // flushDraftTrip) keeps the full-fidelity path — this is a hot-recovery
+    // hint only.
+    const path = state.path.length > MAX_SNAPSHOT_POINTS
+      ? state.path.slice(-MAX_SNAPSHOT_POINTS)
+      : state.path;
     saveActiveTripSnapshot({
       recording: state.recording,
       manual: state.manual,
-      path: state.path,
+      path,
       startTime: state.startTime,
       distanceMeters: state.distanceMeters,
       currentSpeed: state.currentSpeed,
       maxSpeed: state.maxSpeed,
       lastMoveTime: state.lastMoveTime,
       stationarySince: state.stationarySince,
+      draftTripId: state.draftTripId,
     });
+  }
+
+  /**
+   * Upsert the in-progress trip into IndexedDB so a phone reboot or a mid-trip
+   * process kill leaves a recoverable record instead of silently discarding
+   * everything. Uses the pre-assigned draftTripId so finalization overwrites
+   * the same row.
+   */
+  async function flushDraftTrip() {
+    const s = get();
+    if (!s.recording || !s.startTime || !s.draftTripId || s.path.length === 0) return;
+    const now = Date.now();
+    const durationSec = Math.max(1, Math.round((now - s.startTime) / 1000));
+    const trip: Trip = {
+      id: s.draftTripId,
+      startTime: s.startTime,
+      endTime: now,
+      durationSec,
+      distanceMeters: s.distanceMeters,
+      avgSpeed: s.distanceMeters / durationSec,
+      maxSpeed: s.maxSpeed,
+      category: "unclassified",
+      path: simplifyPath(s.path),
+      source: s.manual ? "manual" : "auto",
+      createdAt: s.startTime,
+      updatedAt: now,
+    };
+    try {
+      await saveTrip(trip);
+    } catch {
+      /* ignore — best-effort durability */
+    }
+  }
+
+  function armDraftFlushTimer() {
+    if (draftFlushTimer) return;
+    draftFlushTimer = setInterval(() => void flushDraftTrip(), DRAFT_FLUSH_MS);
+  }
+
+  function clearDraftFlushTimer() {
+    if (draftFlushTimer) clearInterval(draftFlushTimer);
+    draftFlushTimer = null;
+  }
+
+  function attachLifecycle() {
+    if (lifecycleAttached || typeof window === "undefined") return;
+    lifecycleAttached = true;
+    // Flush on tab/app hide — covers browser tab close and Capacitor pause
+    // (Capacitor forwards pause as visibilitychange on the WebView).
+    const onHide = () => {
+      if (document.visibilityState === "hidden") void flushDraftTrip();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", () => void flushDraftTrip());
+    // Best-effort native app pause listener.
+    if (isNativeApp()) {
+      void import("@capacitor/app").then(({ App }) => {
+        void App.addListener("pause", () => void flushDraftTrip());
+        void App.addListener("appStateChange", (s: { isActive: boolean }) => {
+          if (!s.isActive) void flushDraftTrip();
+        });
+      }).catch(() => {/* ignore */});
+    }
   }
 
   function updateTripState(patch: Partial<TrackerState>) {
