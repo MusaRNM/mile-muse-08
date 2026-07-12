@@ -10,6 +10,8 @@ import {
   openBatteryOptimizationSettings,
   requestNativeLocation,
   checkLocationPermissionState,
+  showBatteryStatusNotification,
+  clearBatteryStatusNotification,
   type LocationPermissionState,
 } from "@/lib/native";
 
