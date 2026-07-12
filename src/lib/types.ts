@@ -100,8 +100,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   irsRatePerMile: 0.7, // 2025 IRS standard business mileage rate
   theme: "system",
   // PRIVACY: off by default. When enabled, trip start/end coordinates are
-  // sent to a third-party geocoder (Nominatim, or Google if the connector is
-  // linked) to resolve human-readable addresses.
+  // sent to OpenStreetMap Nominatim (free, no API key) to resolve street
+  // addresses. The app never calls any Google or paid geocoding API.
   reverseGeocodeEnabled: false,
   cloudSyncEnabled: false,
 
