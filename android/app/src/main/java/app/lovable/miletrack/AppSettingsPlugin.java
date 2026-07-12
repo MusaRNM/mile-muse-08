@@ -1,11 +1,15 @@
 package app.lovable.miletrack;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
+
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -15,6 +19,30 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "AppSettings")
 public class AppSettingsPlugin extends Plugin {
+
+    @PluginMethod
+    public void checkLocationPermissions(PluginCall call) {
+        Context ctx = getContext();
+        boolean fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean coarse = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean background;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            background = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED;
+        } else {
+            // Pre-Android 10 there is no separate background permission —
+            // foreground grant implies background access.
+            background = fine || coarse;
+        }
+        JSObject ret = new JSObject();
+        ret.put("fine", fine);
+        ret.put("coarse", coarse);
+        ret.put("background", background);
+        call.resolve(ret);
+    }
+
 
     @PluginMethod
     public void isIgnoringBatteryOptimizations(PluginCall call) {
