@@ -18,6 +18,7 @@ export const TRIP_STOP_ACTION_TYPE = "trip-stop-actions";
 export const TRIP_STOP_END_ACTION = "end-trip";
 export const TRIP_STOP_TRAFFIC_ACTION = "traffic";
 const TRIP_STOP_NOTIFICATION_ID = 230501;
+const BATTERY_STATUS_NOTIFICATION_ID = 230502;
 
 type NativeBgLocation = {
   latitude: number;
