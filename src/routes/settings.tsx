@@ -7,6 +7,7 @@ import {
   isIgnoringBatteryOptimizations,
   requestIgnoreBatteryOptimizations,
   openAppDetailsSettings,
+  openBatteryOptimizationSettings,
   requestNativeLocation,
 } from "@/lib/native";
 
