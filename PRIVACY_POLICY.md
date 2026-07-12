@@ -122,5 +122,4 @@ the app's release notes.
 
 ## 9. Contact
 
-Questions about this policy: _Replace with your support email before
-publishing._
+Questions about this policy: MileTrack.Help@hotmail.com
