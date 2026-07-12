@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// Load signing credentials from android/keystore.properties (git-ignored).
+// The file itself and the referenced .jks/.keystore MUST NOT be committed.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "app.lovable.miletrack"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,14 +24,30 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            // Only attach the signing config when keystore.properties exists,
+            // so CI / contributor builds without the keystore don't fail.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             // R8 shrinks & obfuscates the compiled Java/Kotlin, and prunes
             // unused resources — smaller APK and harder to reverse-engineer
             // the native bridge/plugin surface.
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable false
         }
     }
 

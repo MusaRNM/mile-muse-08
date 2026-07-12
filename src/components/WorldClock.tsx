@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Clock, Globe } from "lucide-react";
+import { useSettings } from "@/lib/settings";
 
 /**
  * Live world clock in the header. Shows the current date/time in the
@@ -11,6 +12,7 @@ export function WorldClock() {
   const [now, setNow] = useState<Date | null>(null);
   const [tz, setTz] = useState<string>("");
   const [city, setCity] = useState<string>("");
+  const reverseGeocodeEnabled = useSettings((s) => s.reverseGeocodeEnabled);
 
   useEffect(() => {
     try {
@@ -23,8 +25,11 @@ export function WorldClock() {
     return () => clearInterval(id);
   }, []);
 
-  // Try to enrich with a city name if geolocation is available. Silent-fail.
+  // Try to enrich with a city name if geolocation is available AND the user
+  // opted into reverse geocoding. Silent-fail. Without opt-in, no coordinates
+  // ever leave the device from this component.
   useEffect(() => {
+    if (!reverseGeocodeEnabled) return;
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) return;
     let cancelled = false;
     navigator.geolocation.getCurrentPosition(
@@ -55,7 +60,7 @@ export function WorldClock() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reverseGeocodeEnabled]);
 
   const time = now
     ? new Intl.DateTimeFormat(undefined, {
