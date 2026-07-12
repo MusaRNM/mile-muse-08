@@ -20,10 +20,9 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 
 /**
  * Baseline security headers for every server-rendered response.
- * CSP is intentionally permissive on script (Vite + Google Maps loader need
- * inline) but restricts connect/img/frame — the primary goal is preventing
- * exfiltration and clickjacking, and scoping Permissions-Policy so geolocation
- * cannot be silently invoked by cross-origin iframes.
+ * The app has no third-party map/script dependencies; CSP is tight to
+ * prevent exfiltration and clickjacking and to scope Permissions-Policy so
+ * geolocation cannot be silently invoked by cross-origin iframes.
  */
 const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => {
   const res = await next();
