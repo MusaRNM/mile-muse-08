@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MileTrack — Privacy Policy</title>
+<meta name="description" content="MileTrack privacy policy. All trip data stays on the device. No cloud, no analytics, no advertising, no Google Maps or paid APIs." />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="./privacy-policy.html" />
+<style>
+  :root { color-scheme: light dark; }
+  html,body { margin:0; padding:0; }
+  body {
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1a1a1f;
+    background: #fafafa;
+    padding: 2rem 1.25rem 4rem;
+  }
+  main { max-width: 780px; margin: 0 auto; background:#fff; padding:2rem 1.75rem; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  h1 { font-size:1.9rem; margin:0 0 .25rem; }
+  h2 { font-size:1.2rem; margin:2rem 0 .5rem; border-bottom:1px solid #eee; padding-bottom:.25rem; }
+  h3 { font-size:1rem; margin:1.25rem 0 .25rem; }
+  p, li { color:#2b2b31; }
+  code { background:#f2f2f4; padding:1px 5px; border-radius:4px; font-size:.92em; }
+  .meta { color:#6b6b74; font-size:.9rem; margin-bottom:1.5rem; }
+  ul { padding-left:1.25rem; }
+  a { color:#0a58c8; }
+  @media (prefers-color-scheme: dark) {
+    body { background:#0b0b0f; color:#e7e7ea; }
+    main { background:#141419; box-shadow:none; }
+    h2 { border-color:#26262d; }
+    p, li { color:#d5d5da; }
+    code { background:#22222a; }
+    .meta { color:#9a9aa4; }
+    a { color:#7bb0ff; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>MileTrack Privacy Policy</h1>
+  <p class="meta"><strong>Last updated:</strong> July 12, 2026 &middot; <strong>App:</strong> MileTrack (<code>app.lovable.miletrack</code>)</p>
+
+  <p>
+    MileTrack is a personal mileage tracker. In plain terms: <strong>your data
+    stays on your phone.</strong> The app has no user accounts, does not upload
+    your trips to any server, does not use Google Maps or any paid API, and
+    does not share your data with anyone.
+  </p>
+
+  <h2>1. What data the app collects</h2>
+  <p>MileTrack only stores data you generate by using it, and it stores that data locally on your device:</p>
+  <ul>
+    <li><strong>Precise GPS location</strong> (latitude, longitude, timestamp, speed) — only while a trip is actively being recorded or automatic trip detection is enabled.</li>
+    <li><strong>Trip records</strong> — start/end time, distance, duration, average and max speed, the recorded route, category (business / personal), and any note you add.</li>
+    <li><strong>Fuel entries</strong> — date, gallons, price, station name, odometer, and an optional receipt photo, only when you manually add them.</li>
+    <li><strong>Settings</strong> — distance unit, mileage rate, thresholds, theme, and opt-in preferences.</li>
+  </ul>
+  <p>MileTrack does <strong>not</strong> collect your name, email, phone number, contacts, device identifiers, advertising ID, installed apps, or any usage analytics. There is no sign-up and no sign-in.</p>
+
+  <h2>2. Why location permission is needed</h2>
+  <ul>
+    <li><strong>Foreground location</strong> — to record the GPS points that form a trip.</li>
+    <li><strong>Background location</strong> — so a trip you have started keeps recording accurately after your screen turns off or you switch to another app. It is used only while a trip is actively being tracked or automatic detection is enabled.</li>
+    <li><strong>Foreground service</strong> — Android requires a foreground service (shown as a persistent notification) to run continuous GPS reliably. The notification tells you exactly when tracking is active.</li>
+    <li><strong>Notifications</strong> — to display the tracking notification and to prompt you when a trip appears to have ended.</li>
+  </ul>
+  <p>Location comes from Android's native OS location service. The app does <strong>not</strong> use the Google Maps SDK, Google Maps JavaScript API, or the Google Geocoding API.</p>
+
+  <h3>Background location — prominent disclosure</h3>
+  <p>
+    Background location is requested only for one purpose: <strong>continuous
+    mileage recording</strong>. If you are not recording a trip and automatic
+    detection is off, the app does not access location. You can revoke
+    background location at any time in Android Settings → Apps → MileTrack →
+    Permissions, and the app will still work for manually entered trips.
+  </p>
+
+  <h2>3. How your data is stored</h2>
+  <ul>
+    <li>All data is stored <strong>locally on your device</strong> in the app's private storage (IndexedDB and preferences).</li>
+    <li>Uninstalling the app deletes your data.</li>
+    <li>Android auto-backup to Google Drive is <strong>disabled</strong> for this app (<code>allowBackup="false"</code>), so your GPS history and receipts are not copied to your Google account.</li>
+    <li>You can export your data yourself as a JSON backup file or a PDF/CSV report from the Settings screen. Where you send that file is entirely your choice; MileTrack is not involved.</li>
+  </ul>
+
+  <h2>4. Data leaving your device</h2>
+  <p>MileTrack has <strong>no cloud sync</strong>, <strong>no analytics</strong>, <strong>no advertising SDKs</strong>, <strong>no Firebase</strong>, <strong>no crash reporting SDK</strong>, and <strong>no Google Maps or Google Cloud APIs</strong>. The app makes network requests in only these situations:</p>
+  <ol>
+    <li><strong>Reverse geocoding — OFF BY DEFAULT.</strong> If, and only if, you turn on <em>Settings → Look up trip addresses</em>, the app will send the coordinates of a trip's start and end points to <a href="https://nominatim.openstreetmap.org">OpenStreetMap Nominatim</a> (free, no API key) to translate them into a street address. Only those two coordinate pairs per trip are sent — never your full route. This can be turned off at any time.</li>
+    <li><strong>Nothing else.</strong> Trip routes, fuel entries, receipts, exports, and settings are never transmitted anywhere.</li>
+  </ol>
+
+  <h2>5. Data sharing</h2>
+  <p>MileTrack does not sell, rent, or share your data with third parties. There is no advertising network, no analytics provider, and no data broker involved.</p>
+
+  <h2>6. Your control over your data</h2>
+  <ul>
+    <li><strong>Export</strong> — Settings → Export creates a JSON or PDF/CSV file you can save or share yourself.</li>
+    <li><strong>Delete a single trip or entry</strong> — delete it from within the app.</li>
+    <li><strong>Delete everything</strong> — use Settings → "Delete all local data", uninstall MileTrack, or clear the app's storage in Android Settings → Apps → MileTrack → Storage → Clear data.</li>
+  </ul>
+  <p>Because there is no server-side data, there is no account to close and nothing for us to delete on your behalf.</p>
+
+  <h2>7. Children</h2>
+  <p>MileTrack is not directed at children under 13, and we do not knowingly collect data from anyone. Because the app collects no personal identifiers, we have no way to know a user's age.</p>
+
+  <h2>8. Security</h2>
+  <ul>
+    <li>Data is kept in the app's private on-device storage.</li>
+    <li>The Android release build has WebView debugging and Android auto-backup disabled.</li>
+    <li>Outbound connections are restricted by an in-app content security policy to only the optional Nominatim endpoint above.</li>
+    <li>Because there is no account and no cloud sync, there is no server for attackers to breach.</li>
+  </ul>
+
+  <h2>9. Changes to this policy</h2>
+  <p>If we change how data is handled, this page and the "Last updated" date at the top will be updated. Meaningful changes will be highlighted in the app's release notes.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions about this policy: <em>Replace with your support email before publishing.</em></p>
+</main>
+</body>
+</html>
