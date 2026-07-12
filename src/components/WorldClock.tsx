@@ -12,6 +12,7 @@ export function WorldClock() {
   const [now, setNow] = useState<Date | null>(null);
   const [tz, setTz] = useState<string>("");
   const [city, setCity] = useState<string>("");
+  const reverseGeocodeEnabled = useSettings((s) => s.reverseGeocodeEnabled);
 
   useEffect(() => {
     try {
