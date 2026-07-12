@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck, ExternalLink } from "lucide-react";
+import { Ruler, Radar, Timer, Bell, DollarSign, Palette, Download, Upload, Trash2, Gauge, MapPin, BatteryCharging, ShieldCheck, ExternalLink, CheckCircle2, XCircle, Satellite } from "lucide-react";
 import {
   isNativeApp,
   isIgnoringBatteryOptimizations,
@@ -9,6 +9,8 @@ import {
   openAppDetailsSettings,
   openBatteryOptimizationSettings,
   requestNativeLocation,
+  checkLocationPermissionState,
+  type LocationPermissionState,
 } from "@/lib/native";
 
 import { Switch } from "@/components/ui/switch";
