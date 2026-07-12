@@ -245,6 +245,7 @@ export const useTracker = create<TrackerState>((set, get) => {
 
   function reset(keepWatching = true) {
     clearAutoStopTimer();
+    clearDraftFlushTimer();
     void clearTripStopNotification();
     saveActiveTripSnapshot(null);
     if (!keepWatching || !useSettings.getState().autoDetect) {
@@ -268,6 +269,7 @@ export const useTracker = create<TrackerState>((set, get) => {
       maxSpeed: 0,
       lastMoveTime: null,
       stationarySince: null,
+      draftTripId: null,
     });
   }
 
