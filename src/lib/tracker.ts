@@ -496,7 +496,9 @@ export const useTracker = create<TrackerState>((set, get) => {
       const durationSec = Math.max(1, Math.round((endTime - s.startTime) / 1000));
       const avgSpeed = distanceMeters / durationSec;
 
-      const id = newId();
+      // Reuse the draft id assigned at trip-start so we overwrite any partial
+      // row that was flushed during recording (crash/reboot durability).
+      const id = s.draftTripId ?? newId();
       const trip: Trip = {
         id,
         startTime: s.startTime,
@@ -508,7 +510,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         category: "unclassified",
         path,
         source: s.manual ? "manual" : "auto",
-        createdAt: endTime,
+        createdAt: s.startTime,
         updatedAt: endTime,
       };
 
