@@ -10,10 +10,10 @@ interface RouteMapProps {
 }
 
 /**
- * Lightweight, dependency-free route renderer. Draws the recorded GPS polyline
- * scaled to its bounding box with a subtle grid backdrop. Works fully offline
- * and needs no API key. When the Google Maps connector is enabled this can be
- * swapped for an interactive map without changing callers.
+ * Route renderer used everywhere trips are displayed. Draws the recorded GPS
+ * polyline scaled to its bounding box with a subtle grid backdrop. Fully
+ * offline, dependency-free, no API key, no tile fetch — so the app never
+ * incurs Google Maps or any paid-tile charges.
  */
 export function RouteMap({ path, className, markers = true }: RouteMapProps) {
   const geometry = useMemo(() => computeGeometry(path), [path]);
