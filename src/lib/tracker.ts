@@ -425,6 +425,7 @@ export const useTracker = create<TrackerState>((set, get) => {
   }
 
   const recovered = loadActiveTripSnapshot();
+  attachLifecycle();
 
   return {
     watching: false,
@@ -443,9 +444,18 @@ export const useTracker = create<TrackerState>((set, get) => {
     lastAccuracyMeters: null,
     locationSampleCount: 0,
     stationarySince: recovered?.stationarySince ?? null,
+    draftTripId: recovered?.draftTripId ?? null,
     pendingClassifyId: null,
 
-    enableWatch: () => startWatch(),
+    enableWatch: () => {
+      startWatch();
+      // If we recovered a recording session across a cold start / reboot,
+      // re-arm the durability timers so the next flush actually happens.
+      if (get().recording) {
+        armAutoStopTimer();
+        armDraftFlushTimer();
+      }
+    },
     disableWatch: () => {
       reset(false);
       stopWatch();
@@ -459,6 +469,7 @@ export const useTracker = create<TrackerState>((set, get) => {
         manual: true,
         stopPromptOpen: false,
         startTime: now,
+        draftTripId: newId(),
         path: [],
         distanceMeters: 0,
         maxSpeed: 0,
@@ -469,6 +480,7 @@ export const useTracker = create<TrackerState>((set, get) => {
       persistCurrentTrip();
       if (isNativeApp()) void startBackgroundTracking(handleNativePoint, "record");
       armAutoStopTimer();
+      armDraftFlushTimer();
     },
 
     stopAndSave: async () => {
