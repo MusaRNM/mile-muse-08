@@ -41,6 +41,13 @@ interface TrackerState {
   locationSampleCount: number;
   stationarySince: number | null;
 
+  /**
+   * Id assigned at trip-start. Used to durably upsert the in-progress trip
+   * into IndexedDB so a phone reboot or process kill mid-trip does not lose
+   * the recording. Same id is reused when the trip is finalized.
+   */
+  draftTripId: string | null;
+
   /** Trip id waiting for the user to classify (business/personal). */
   pendingClassifyId: string | null;
 
