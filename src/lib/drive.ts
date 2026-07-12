@@ -42,14 +42,12 @@ interface GoogleAccountsOAuth2 {
   }) => GoogleTokenClient;
   revoke: (token: string, done?: () => void) => void;
 }
-declare global {
-  interface Window {
-    google?: {
-      accounts?: { oauth2?: GoogleAccountsOAuth2 };
-      // Google Maps also augments window.google with its own `maps` field;
-      // keep the accounts field optional so both declarations merge cleanly.
-    };
-  }
+type WindowWithGis = Window & {
+  google?: { accounts?: { oauth2?: GoogleAccountsOAuth2 } };
+};
+function gis(): GoogleAccountsOAuth2 | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as WindowWithGis).google?.accounts?.oauth2;
 }
 
 let tokenClient: GoogleTokenClient | null = null;
